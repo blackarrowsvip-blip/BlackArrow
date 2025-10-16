@@ -1088,6 +1088,31 @@
             font-weight: bold;
             color: #1e3c72;
         }
+
+        /* Estilos para Registros Financieros */
+        .transaction-record {
+            padding: 15px;
+            margin-bottom: 10px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border-left: 4px solid #27ae60;
+        }
+
+        .transaction-record.recharge {
+            border-left-color: #27ae60;
+        }
+
+        .transaction-record.withdrawal {
+            border-left-color: #e74c3c;
+        }
+
+        .transaction-record.pending {
+            border-left-color: #f39c12;
+        }
+
+        .transaction-record.rejected {
+            border-left-color: #e74c3c;
+        }
     </style>
 </head>
 <body>
@@ -1472,7 +1497,7 @@
                         Completar Tarea
                     </button>
 
-                    <div class="countdown-timer" id="task-countdown">
+                    <div class="countdown-timer" id="task-countdown" style="display: none;">
                         00:00:00
                     </div>
 
@@ -1763,6 +1788,26 @@
                 <button class="btn" onclick="processWithdrawal()">Confirmar</button>
             </div>
         </div>
+
+        <!-- Pantalla de Registros Financieros -->
+        <div id="financial-records-screen" class="card" style="display: none;">
+            <div class="screen-header">
+                <button class="back-btn" onclick="showProfileTab()">←</button>
+                <h1>Registros Financieros</h1>
+            </div>
+            
+            <!-- Filtros -->
+            <div class="tab-buttons">
+                <div class="tab-btn active" onclick="filterFinancialRecords('all')">Todos</div>
+                <div class="tab-btn" onclick="filterFinancialRecords('recharge')">Recargas</div>
+                <div class="tab-btn" onclick="filterFinancialRecords('withdrawal')">Retiros</div>
+            </div>
+            
+            <!-- Lista de transacciones -->
+            <div id="financial-records-container">
+                <!-- Las transacciones se cargan aquí -->
+            </div>
+        </div>
     </div>
 
     <!-- Navegación Inferior -->
@@ -1820,6 +1865,7 @@
             balance: 0,
             rechargeAmount: 0,
             teamMembers: [],
+            nextTaskTime: null,
             userInfo: {
                 email: '',
                 phone: '',
@@ -2147,6 +2193,10 @@
                 userState.userInfo.email = user.email;
                 userState.userInfo.phone = user.phone;
                 userState.userInfo.referralCode = user.referralCode;
+                userState.nextTaskTime = user.nextTaskTime ? user.nextTaskTime.toDate() : null;
+                
+                // Cargar timer de tareas si existe
+                await loadTaskTimer();
                 
                 showDashboard();
                 showNotification(`✅ Bienvenido de nuevo, ${user.email}`);
@@ -2377,6 +2427,302 @@
         }
 
         // =============================================
+        // SISTEMA DE CONTADOR DE TAREAS - NUEVO
+        // =============================================
+
+        async function loadTaskTimer() {
+            try {
+                if (userState.nextTaskTime) {
+                    startCountdown();
+                }
+            } catch (error) {
+                console.error('Error cargando timer de tareas:', error);
+            }
+        }
+
+        function startCountdown() {
+            const countdownElement = document.getElementById('task-countdown');
+            const completeBtn = document.getElementById('complete-task-btn');
+            
+            if (!userState.nextTaskTime) {
+                countdownElement.style.display = 'none';
+                completeBtn.disabled = false;
+                completeBtn.textContent = 'Completar Tarea';
+                return;
+            }
+            
+            function updateTimer() {
+                const now = new Date();
+                const timeDiff = userState.nextTaskTime - now;
+                
+                if (timeDiff <= 0) {
+                    // ¡TIEMPO COMPLETADO!
+                    countdownElement.style.display = 'none';
+                    completeBtn.disabled = false;
+                    completeBtn.textContent = 'Completar Tarea';
+                    userState.nextTaskTime = null;
+                    
+                    // Limpiar de la base de datos
+                    db.collection('users').doc(userState.currentUser.id).update({
+                        nextTaskTime: null
+                    });
+                    
+                    showNotification('🎉 ¡Ya puedes completar una nueva tarea!');
+                    return;
+                }
+                
+                // Calcular horas, minutos, segundos restantes
+                const hours = Math.floor(timeDiff / (1000 * 60 * 60));
+                const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((timeDiff % (1000 * 60)) / 1000);
+                
+                // Actualizar display
+                countdownElement.textContent = 
+                    `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                
+                // Desactivar botón y mostrar contador
+                countdownElement.style.display = 'block';
+                completeBtn.disabled = true;
+                completeBtn.textContent = 'Espera para próxima tarea';
+            }
+            
+            // Ejecutar inmediatamente y cada segundo
+            updateTimer();
+            setInterval(updateTimer, 1000);
+        }
+
+        async function completeTask() {
+            const activeTask = userState.tasks.find(task => !task.completed);
+            
+            if (!activeTask) {
+                showNotification('❌ No hay tareas pendientes para completar', 'error');
+                return;
+            }
+
+            if (userState.nextTaskTime) {
+                showNotification('❌ Espera a que termine el contador para completar otra tarea', 'error');
+                return;
+            }
+
+            showTaskAnimation();
+            
+            try {
+                // 1. Calcular próxima tarea (24 horas después)
+                const nextTaskTime = new Date(Date.now() + 24 * 60 * 60 * 1000);
+                
+                // 2. Guardar en Firebase
+                await db.collection('users').doc(userState.currentUser.id).update({
+                    lastTaskCompletion: new Date(),
+                    nextTaskTime: nextTaskTime,
+                    balance: userState.balance + activeTask.reward
+                });
+
+                // 3. Actualizar estado local
+                userState.balance += activeTask.reward;
+                userState.lastTaskCompletion = new Date();
+                userState.nextTaskTime = nextTaskTime;
+                activeTask.completed = true;
+
+                // 4. Mostrar notificación
+                showNotification(`✅ ¡Tarea completada! +${activeTask.reward.toFixed(2)} USDT. Próxima tarea en 24h.`);
+                
+                // 5. Actualizar UI y iniciar contador
+                updateUI();
+                updateTasksUI();
+                startCountdown();
+                
+            } catch (error) {
+                console.error('Error completando tarea:', error);
+                showNotification('❌ Error al completar la tarea', 'error');
+            }
+        }
+
+        // =============================================
+        // SISTEMA DE REGISTROS FINANCIEROS - NUEVO
+        // =============================================
+
+        async function showFinancialRecords() {
+            hideAllScreens();
+            document.getElementById('financial-records-screen').style.display = 'block';
+            await loadFinancialRecords();
+        }
+
+        function showProfileTab() {
+            hideAllScreens();
+            document.getElementById('dashboard').style.display = 'block';
+            document.getElementById('bottom-nav').style.display = 'flex';
+            showAppTab('profile');
+        }
+
+        async function loadFinancialRecords() {
+            try {
+                // Mostrar loading
+                document.getElementById('financial-records-container').innerHTML = `
+                    <div style="text-align: center; padding: 40px; color: #666;">
+                        Cargando registros...
+                    </div>
+                `;
+
+                const allRecords = [];
+
+                // 1. CARGAR RECARGAS
+                const rechargesSnapshot = await db.collection('recharges')
+                    .where('userId', '==', userState.currentUser.id)
+                    .orderBy('createdAt', 'desc')
+                    .get();
+
+                rechargesSnapshot.forEach(doc => {
+                    const data = doc.data();
+                    allRecords.push({
+                        id: doc.id,
+                        type: 'recharge',
+                        amount: data.amount,
+                        status: data.status,
+                        date: data.createdAt.toDate(),
+                        description: `Recarga ${data.network}`,
+                        icon: '📥'
+                    });
+                });
+
+                // 2. CARGAR RETIROS
+                const withdrawalsSnapshot = await db.collection('withdrawals')
+                    .where('userId', '==', userState.currentUser.id)
+                    .orderBy('createdAt', 'desc')
+                    .get();
+
+                withdrawalsSnapshot.forEach(doc => {
+                    const data = doc.data();
+                    allRecords.push({
+                        id: doc.id,
+                        type: 'withdrawal',
+                        amount: data.amount,
+                        status: data.status,
+                        date: data.createdAt.toDate(),
+                        description: `Retiro ${data.address.substring(0, 10)}...`,
+                        icon: '📤'
+                    });
+                });
+
+                // Ordenar por fecha (más reciente primero)
+                allRecords.sort((a, b) => b.date - a.date);
+
+                // Mostrar en la interfaz
+                displayFinancialRecords(allRecords);
+
+            } catch (error) {
+                console.error('Error cargando registros financieros:', error);
+                document.getElementById('financial-records-container').innerHTML = `
+                    <div class="no-data">
+                        <div class="no-data-icon">❌</div>
+                        <div>Error cargando registros</div>
+                    </div>
+                `;
+            }
+        }
+
+        function displayFinancialRecords(records) {
+            const container = document.getElementById('financial-records-container');
+            
+            if (records.length === 0) {
+                container.innerHTML = `
+                    <div class="no-data">
+                        <div class="no-data-icon">📊</div>
+                        <div>No hay registros financieros</div>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = records.map(record => `
+                <div class="transaction-record" style="
+                    padding: 15px; 
+                    margin-bottom: 10px; 
+                    background: #f8f9fa; 
+                    border-radius: 10px;
+                    border-left: 4px solid ${getRecordColor(record.type, record.status)};
+                ">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div style="flex: 1;">
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <div style="font-size: 1.2em;">${record.icon}</div>
+                                <div>
+                                    <div style="font-weight: bold; color: #333;">
+                                        ${record.description}
+                                    </div>
+                                    <div style="font-size: 0.8em; color: #666;">
+                                        ${record.date.toLocaleDateString()} • 
+                                        ${record.date.toLocaleTimeString()}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div style="font-weight: bold; color: ${getAmountColor(record.type)};">
+                                ${record.type === 'withdrawal' ? '-' : '+'}${record.amount} USDT
+                            </div>
+                            <div style="font-size: 0.8em; color: #666; 
+                                 padding: 2px 8px; 
+                                 border-radius: 10px; 
+                                 background: ${getStatusBackground(record.status)};
+                                 display: inline-block;">
+                                ${getStatusText(record.status)}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function filterFinancialRecords(filterType) {
+            // Actualizar tabs activos
+            document.querySelectorAll('#financial-records-screen .tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // Recargar y filtrar
+            loadFinancialRecords().then(() => {
+                if (filterType !== 'all') {
+                    const records = document.querySelectorAll('.transaction-record');
+                    records.forEach(record => {
+                        const isVisible = record.textContent.toLowerCase().includes(filterType);
+                        record.style.display = isVisible ? 'block' : 'none';
+                    });
+                }
+            });
+        }
+
+        // Funciones auxiliares para estilos de registros
+        function getAmountColor(type) {
+            return type === 'withdrawal' ? '#e74c3c' : '#27ae60';
+        }
+
+        function getRecordColor(type, status) {
+            if (status === 'rejected') return '#e74c3c';
+            if (status === 'pending') return '#f39c12';
+            
+            return type === 'recharge' ? '#27ae60' : '#3498db';
+        }
+
+        function getStatusBackground(status) {
+            const backgrounds = {
+                'pending': '#fff3cd',
+                'approved': '#d4edda', 
+                'rejected': '#f8d7da'
+            };
+            return backgrounds[status] || '#e1e1e1';
+        }
+
+        function getStatusText(status) {
+            const texts = {
+                'pending': 'Pendiente',
+                'approved': 'Aprobado',
+                'rejected': 'Rechazado'
+            };
+            return texts[status] || status;
+        }
+
+        // =============================================
         // FUNCIONES AUXILIARES
         // =============================================
 
@@ -2426,6 +2772,7 @@
             document.getElementById('withdraw-screen').style.display = 'none';
             document.getElementById('admin-panel').style.display = 'none';
             document.getElementById('admin-login').style.display = 'none';
+            document.getElementById('financial-records-screen').style.display = 'none';
             document.getElementById('bottom-nav').style.display = 'none';
         }
 
@@ -2532,7 +2879,7 @@
             document.getElementById('profile-recharge-amount').textContent = userState.rechargeAmount.toFixed(2);
         }
 
-        // Funciones de tareas (simplificadas para el ejemplo)
+        // Funciones de tareas
         function generateTask() {
             if (userState.activeVIP) {
                 const task = {
@@ -2566,36 +2913,13 @@
             document.getElementById('pending-tasks').textContent = pendingTasks;
 
             const completeBtn = document.getElementById('complete-task-btn');
-            if (pendingTasks > 0) {
+            if (pendingTasks > 0 && !userState.nextTaskTime) {
                 completeBtn.disabled = false;
                 completeBtn.textContent = 'Completar Tarea';
             } else {
                 completeBtn.disabled = true;
-                completeBtn.textContent = 'No hay tareas pendientes';
+                completeBtn.textContent = userState.nextTaskTime ? 'Espera para próxima tarea' : 'No hay tareas pendientes';
             }
-        }
-
-        function completeTask() {
-            const activeTask = userState.tasks.find(task => !task.completed);
-            
-            if (!activeTask) {
-                showNotification('❌ No hay tareas pendientes para completar', 'error');
-                return;
-            }
-
-            showTaskAnimation();
-            
-            setTimeout(() => {
-                userState.balance += activeTask.reward;
-                activeTask.completed = true;
-                activeTask.completedTime = Date.now();
-                activeTask.nextTaskTime = Date.now() + 24 * 60 * 60 * 1000;
-                
-                showNotification(`✅ ¡Tarea completada! +${activeTask.reward.toFixed(2)} USDT añadidos a tu balance`);
-                updateUI();
-                updateTasksUI();
-                
-            }, 2000);
         }
 
         function showTaskAnimation() {
@@ -2625,14 +2949,10 @@
         }
 
         function copyReferralLink() {
-            const link = `https://bluearrow.com/#/register?ref=${userState.userInfo.referralCode}`;
+            const link = `https://blackarrowsvip-blip.github.io/BlackArrow/#/register?ref=${userState.userInfo.referralCode}`;
             navigator.clipboard.writeText(link).then(() => {
                 showNotification('✅ Enlace de referencia copiado');
             });
-        }
-
-        function showFinancialRecords() {
-            showNotification('📊 Registros financieros - Próximamente');
         }
 
         function showTransfer() {
