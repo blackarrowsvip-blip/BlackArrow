@@ -1,0 +1,2651 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blue Arrow - Plataforma de Inversión</title>
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Arial', sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            min-height: 100vh;
+            padding: 20px;
+            padding-bottom: 80px;
+        }
+
+        .container {
+            max-width: 400px;
+            margin: 0 auto;
+        }
+
+        .logo {
+            text-align: center;
+            color: white;
+            font-size: 2.2em;
+            font-weight: bold;
+            margin-bottom: 30px;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+
+        .logo span {
+            color: #4fc3f7;
+        }
+
+        .card {
+            background: white;
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #333;
+            font-size: 1.4em;
+        }
+
+        /* Estilos para el panel de administración */
+        .admin-panel {
+            background: white;
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+            margin-bottom: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .admin-header {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+
+        .admin-title {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #1e3c72;
+            margin-bottom: 10px;
+        }
+
+        .admin-tabs {
+            display: flex;
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 5px;
+            margin-bottom: 25px;
+        }
+
+        .admin-tab {
+            flex: 1;
+            text-align: center;
+            padding: 12px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 500;
+            color: #666;
+        }
+
+        .admin-tab.active {
+            background: #1e3c72;
+            color: white;
+            box-shadow: 0 4px 15px rgba(30, 60, 114, 0.3);
+        }
+
+        .admin-section {
+            display: none;
+        }
+
+        .admin-section.active {
+            display: block;
+        }
+
+        .users-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .users-table th, .users-table td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #e1e1e1;
+        }
+
+        .users-table th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .users-table tr:hover {
+            background-color: #f5f5f5;
+        }
+
+        .action-btn {
+            padding: 8px 12px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-right: 5px;
+            transition: all 0.3s;
+        }
+
+        .approve-btn {
+            background: #27ae60;
+            color: white;
+        }
+
+        .reject-btn {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .delete-btn {
+            background: #e67e22;
+            color: white;
+        }
+
+        .action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+        }
+
+        .admin-login {
+            max-width: 400px;
+            margin: 0 auto;
+        }
+
+        .admin-login input {
+            width: 100%;
+            padding: 15px 20px;
+            border: 2px solid #e1e1e1;
+            border-radius: 12px;
+            font-size: 16px;
+            transition: all 0.3s;
+            background: #f8f9fa;
+            margin-bottom: 20px;
+        }
+
+        .admin-login input:focus {
+            border-color: #1e3c72;
+            background: white;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(30, 60, 114, 0.1);
+        }
+
+        .admin-login .btn {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, #1e3c72, #2a5298);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .admin-login .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(30, 60, 114, 0.4);
+        }
+
+        .stats-cards {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .stat-card {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            border: 1px solid #e1e1e1;
+        }
+
+        .stat-value {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #1e3c72;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        /* Estilos generales */
+        .tab-buttons {
+            display: flex;
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 5px;
+            margin-bottom: 25px;
+        }
+
+        .tab-btn {
+            flex: 1;
+            text-align: center;
+            padding: 12px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 500;
+            color: #666;
+        }
+
+        .tab-btn.active {
+            background: #1e3c72;
+            color: white;
+            box-shadow: 0 4px 15px rgba(30, 60, 114, 0.3);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        input[type="email"],
+        input[type="password"],
+        input[type="text"],
+        input[type="tel"],
+        input[type="number"] {
+            width: 100%;
+            padding: 15px 20px;
+            border: 2px solid #e1e1e1;
+            border-radius: 12px;
+            font-size: 16px;
+            transition: all 0.3s;
+            background: #f8f9fa;
+        }
+
+        input:focus {
+            border-color: #1e3c72;
+            background: white;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(30, 60, 114, 0.1);
+        }
+
+        .btn {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, #1e3c72, #2a5298);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 10px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(30, 60, 114, 0.4);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #27ae60, #2ecc71);
+        }
+
+        .btn-warning {
+            background: linear-gradient(135deg, #e67e22, #e74c3c);
+        }
+
+        .switch-auth {
+            text-align: center;
+            margin-top: 25px;
+            color: #666;
+        }
+
+        .switch-auth a {
+            color: #1e3c72;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        /* Navegación Inferior */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            display: flex;
+            padding: 10px 0;
+            box-shadow: 0 -5px 20px rgba(0,0,0,0.1);
+            border-top-left-radius: 20px;
+            border-top-right-radius: 20px;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+
+        .nav-item {
+            flex: 1;
+            text-align: center;
+            padding: 8px 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+            color: #666;
+            font-size: 0.8em;
+        }
+
+        .nav-item.active {
+            color: #1e3c72;
+            font-weight: bold;
+        }
+
+        .nav-icon {
+            font-size: 1.5em;
+            margin-bottom: 4px;
+            display: block;
+        }
+
+        /* Banner de Bienvenida */
+        .welcome-banner {
+            background: linear-gradient(135deg, #4fc3f7, #29b6f6);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            text-align: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .marquee-container {
+            overflow: hidden;
+            white-space: nowrap;
+            position: relative;
+        }
+
+        .marquee-text {
+            display: inline-block;
+            padding-left: 100%;
+            animation: marquee 15s linear infinite;
+            font-size: 1.3em;
+            font-weight: bold;
+        }
+
+        .marquee-text span {
+            color: #ffeb3b;
+        }
+
+        .banner-subtitle {
+            margin-top: 10px;
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+
+        @keyframes marquee {
+            0% { transform: translateX(0%); }
+            100% { transform: translateX(-100%); }
+        }
+
+        /* Botones de Acción */
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .action-btn-user {
+            flex: 1;
+            background: linear-gradient(135deg, #27ae60, #2ecc71);
+            color: white;
+            border: none;
+            padding: 15px;
+            border-radius: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: center;
+            font-size: 1em;
+        }
+
+        .action-btn-user.withdraw {
+            background: linear-gradient(135deg, #e74c3c, #e67e22);
+        }
+
+        .action-btn-user:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        /* Actividades */
+        .activities-section {
+            background: linear-gradient(135deg, #ffeaa7, #fdcb6e);
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .activities-section h3 {
+            text-align: center;
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        /* Pantallas de Recarga y Retiro */
+        .screen-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .back-btn {
+            background: none;
+            border: none;
+            font-size: 1.5em;
+            cursor: pointer;
+            color: #1e3c72;
+            margin-right: 10px;
+        }
+
+        .network-list {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .network-item {
+            background: #f8f9fa;
+            border: 2px solid #e1e1e1;
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .network-item.selected {
+            border-color: #1e3c72;
+            background: #e3f2fd;
+        }
+
+        .address-box {
+            background: #f8f9fa;
+            border: 2px solid #e1e1e1;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 20px 0;
+            text-align: center;
+            font-family: monospace;
+            word-break: break-all;
+        }
+
+        .copy-btn {
+            background: #1e3c72;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        /* Estilos para VIP */
+        .vip-level {
+            background: linear-gradient(135deg, #fff3cd, #ffeaa7);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 15px;
+            border: 2px solid #ffd700;
+        }
+
+        .vip-level.active {
+            border-color: #27ae60;
+            background: linear-gradient(135deg, #d4edda, #c3e6cb);
+        }
+
+        .vip-level h3 {
+            color: #333;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            font-size: 14px;
+        }
+
+        .stats div {
+            text-align: center;
+            flex: 1;
+        }
+
+        .unlock-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #1e3c72, #2a5298);
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .unlock-btn.unlocked {
+            background: linear-gradient(135deg, #27ae60, #2ecc71);
+        }
+
+        .unlock-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(30, 60, 114, 0.4);
+        }
+
+        /* Estilos para Tareas */
+        .balance-display {
+            text-align: center;
+            padding: 20px;
+            background: linear-gradient(135deg, #1e3c72, #2a5298);
+            color: white;
+            border-radius: 15px;
+            margin-bottom: 20px;
+        }
+
+        .balance-amount {
+            font-size: 2.5em;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+
+        .task-stats {
+            display: flex;
+            justify-content: space-between;
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .complete-task-btn {
+            background: linear-gradient(135deg, #27ae60, #2ecc71);
+            color: white;
+            border: none;
+            padding: 15px;
+            border-radius: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+            margin-bottom: 20px;
+            transition: all 0.3s;
+        }
+
+        .complete-task-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(39, 174, 96, 0.4);
+        }
+
+        .complete-task-btn:disabled {
+            background: #95a5a6;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .countdown-timer {
+            font-size: 1.8em;
+            font-weight: bold;
+            text-align: center;
+            color: #e74c3c;
+            margin: 10px 0;
+            font-family: monospace;
+        }
+
+        .section-title {
+            font-size: 1.2em;
+            font-weight: bold;
+            margin: 20px 0 15px 0;
+            color: #333;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e1e1e1;
+        }
+
+        .task-item-new {
+            background: white;
+            border: 2px solid #e1e1e1;
+            border-radius: 10px;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .task-status {
+            font-weight: bold;
+            color: #27ae60;
+        }
+
+        .task-status.pending {
+            color: #e67e22;
+        }
+
+        .task-reward {
+            font-weight: bold;
+            color: #27ae60;
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 40px 20px;
+            color: #666;
+            background: #f8f9fa;
+            border-radius: 15px;
+            margin: 20px 0;
+        }
+
+        .no-data-icon {
+            font-size: 3em;
+            margin-bottom: 10px;
+        }
+
+        /* Estilos para Equipo */
+        .team-header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .team-title {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #1e3c72;
+            margin-bottom: 10px;
+        }
+
+        .referral-section {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 2px solid #e1e1e1;
+        }
+
+        .referral-code {
+            background: white;
+            border: 2px dashed #1e3c72;
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+            margin: 15px 0;
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #1e3c72;
+        }
+
+        .referral-link {
+            background: white;
+            border: 1px solid #e1e1e1;
+            border-radius: 10px;
+            padding: 12px;
+            margin: 10px 0;
+            text-align: center;
+            font-size: 0.9em;
+            word-break: break-all;
+            color: #666;
+        }
+
+        .selection-period {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .period-title {
+            text-align: center;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.1em;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 10px;
+            text-align: center;
+        }
+
+        .team-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 10px;
+            margin: 15px 0;
+        }
+
+        .team-stat-item {
+            background: white;
+            border: 1px solid #e1e1e1;
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+        }
+
+        .team-stat-main {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #1e3c72;
+            margin-bottom: 5px;
+        }
+
+        .team-stat-sub {
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .level-section {
+            background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 15px 0;
+            border: 2px solid #1e3c72;
+        }
+
+        .level-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .level-title {
+            font-weight: bold;
+            color: #1e3c72;
+            font-size: 1.1em;
+        }
+
+        .level-stats {
+            font-weight: bold;
+            color: #333;
+        }
+
+        .commission-percentage {
+            text-align: center;
+            font-size: 2em;
+            font-weight: bold;
+            color: #27ae60;
+            margin: 10px 0;
+        }
+
+        .commission-label {
+            text-align: center;
+            color: #666;
+            font-size: 0.9em;
+            margin-bottom: 15px;
+        }
+
+        .earnings-section {
+            text-align: center;
+            margin: 15px 0;
+        }
+
+        .earnings-value {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #1e3c72;
+            margin-bottom: 5px;
+        }
+
+        .earnings-label {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        /* Estilos para Perfil */
+        .profile-header {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+
+        .profile-title {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #1e3c72;
+            margin-bottom: 15px;
+        }
+
+        .account-info {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #e1e1e1;
+        }
+
+        .info-row:last-child {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+
+        .info-label {
+            font-weight: bold;
+            color: #333;
+        }
+
+        .info-value {
+            color: #1e3c72;
+            font-weight: 500;
+        }
+
+        .info-value.email {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .recharge-section {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .recharge-title {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .balance-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            padding: 12px;
+            background: white;
+            border-radius: 10px;
+            border: 1px solid #e1e1e1;
+        }
+
+        .balance-label {
+            color: #666;
+        }
+
+        .balance-amount-profile {
+            font-weight: bold;
+            color: #1e3c72;
+            font-size: 1.1em;
+        }
+
+        .account-options {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .option-item {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            background: white;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #e1e1e1;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .option-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .option-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            border-color: #1e3c72;
+        }
+
+        .option-icon {
+            font-size: 1.5em;
+            margin-right: 15px;
+            color: #1e3c72;
+        }
+
+        .option-text {
+            flex: 1;
+            font-weight: 500;
+            color: #333;
+        }
+
+        .option-arrow {
+            color: #666;
+            font-size: 1.2em;
+        }
+
+        .logout-btn {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, #e74c3c, #e67e22);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 10px;
+        }
+
+        .logout-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(231, 76, 60, 0.4);
+        }
+
+        /* Notificaciones Animadas */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #27ae60;
+            color: white;
+            padding: 15px 25px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            z-index: 1000;
+            animation: slideIn 0.5s ease-out;
+        }
+
+        .notification.error {
+            background: #e74c3c;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        /* Animación de completar tarea */
+        .task-animation-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(30, 60, 114, 0.95);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+            flex-direction: column;
+            color: white;
+        }
+
+        .task-spinner {
+            width: 80px;
+            height: 80px;
+            border: 5px solid #ffffff;
+            border-top: 5px solid #4fc3f7;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .task-animation-text {
+            font-size: 1.2em;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        /* Estilos para Retiro */
+        .withdraw-amount-group {
+            position: relative;
+            margin-bottom: 20px;
+        }
+
+        .max-btn {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: #1e3c72;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9em;
+        }
+
+        /* Estilos para tabs de contenido */
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Indicadores de carga */
+        .loading {
+            opacity: 0.7;
+            pointer-events: none;
+        }
+
+        .loading::after {
+            content: "Cargando...";
+            display: block;
+            text-align: center;
+            margin-top: 10px;
+            font-weight: bold;
+            color: #1e3c72;
+        }
+    </style>
+</head>
+<body>
+    <div class="logo">BLUE <span>ARROW</span></div>
+    
+    <div class="container">
+        <!-- Panel de Administración -->
+        <div id="admin-panel" class="admin-panel" style="display: none;">
+            <div class="admin-header">
+                <div class="admin-title">PANEL DE ADMINISTRACIÓN</div>
+                <div style="color: #666; margin-bottom: 15px;">Gestión completa de usuarios y transacciones</div>
+                <button class="btn" onclick="logoutAdmin()" style="background: #e74c3c; width: auto; padding: 10px 20px;">
+                    Cerrar Sesión Admin
+                </button>
+            </div>
+
+            <div class="stats-cards">
+                <div class="stat-card">
+                    <div class="stat-value" id="total-users">0</div>
+                    <div class="stat-label">Usuarios Totales</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="pending-recharges">0</div>
+                    <div class="stat-label">Recargas Pendientes</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="pending-withdrawals">0</div>
+                    <div class="stat-label">Retiros Pendientes</div>
+                </div>
+            </div>
+
+            <div class="admin-tabs">
+                <div class="admin-tab active" onclick="showAdminTab('users')">Usuarios</div>
+                <div class="admin-tab" onclick="showAdminTab('recharges')">Recargas</div>
+                <div class="admin-tab" onclick="showAdminTab('withdrawals')">Retiros</div>
+            </div>
+
+            <!-- Tabla de Usuarios -->
+            <div id="users-tab" class="admin-section active">
+                <h2>Gestión de Usuarios</h2>
+                <table class="users-table">
+                    <thead>
+                        <tr>
+                            <th>Email/Teléfono</th>
+                            <th>Balance (USDT)</th>
+                            <th>VIP</th>
+                            <th>Fecha Registro</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="users-table-body">
+                        <!-- Los usuarios se cargan dinámicamente aquí -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Tabla de Recargas -->
+            <div id="recharges-tab" class="admin-section">
+                <h2>Recargas Pendientes</h2>
+                <table class="users-table">
+                    <thead>
+                        <tr>
+                            <th>Usuario</th>
+                            <th>Cantidad (USDT)</th>
+                            <th>Red</th>
+                            <th>Fecha</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="recharges-table-body">
+                        <!-- Las recargas se cargan dinámicamente aquí -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Tabla de Retiros -->
+            <div id="withdrawals-tab" class="admin-section">
+                <h2>Retiros Pendientes</h2>
+                <table class="users-table">
+                    <thead>
+                        <tr>
+                            <th>Usuario</th>
+                            <th>Cantidad (USDT)</th>
+                            <th>Dirección</th>
+                            <th>Fecha</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="withdrawals-table-body">
+                        <!-- Los retiros se cargan dinámicamente aquí -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Login de Administración -->
+        <div id="admin-login" class="card admin-login" style="display: none;">
+            <h1>Acceso Administración</h1>
+            <div class="form-group">
+                <input type="password" id="admin-password" placeholder="Contraseña de administración">
+            </div>
+            <button class="btn" onclick="loginAdmin()">Acceder al Panel</button>
+            <div class="switch-auth" style="margin-top: 20px;">
+                <a href="#" onclick="showLogin()">Volver al login de usuario</a>
+            </div>
+        </div>
+
+        <!-- Página de Login -->
+        <div id="login-page" class="card">
+            <h1>Acceso</h1>
+            <div class="form-group">
+                <input type="text" id="login-email" placeholder="Correo electrónico o teléfono">
+            </div>
+            <div class="form-group">
+                <input type="password" id="login-password" placeholder="Contraseña">
+            </div>
+            <button class="btn" onclick="loginUser()">Acceder</button>
+            <div class="switch-auth">
+                ¿No tienes cuenta? <a href="#" onclick="showRegister()">Regístrate aquí</a>
+            </div>
+            <div class="switch-auth" style="margin-top: 15px;">
+                <a href="#" onclick="showAdminLogin()">Acceso administración</a>
+            </div>
+        </div>
+
+        <!-- Página de Registro -->
+        <div id="register-page" class="card" style="display: none;">
+            <h1>Inscribirse</h1>
+            <div class="tab-buttons">
+                <div class="tab-btn active" onclick="switchRegisterTab('email')">Correo</div>
+                <div class="tab-btn" onclick="switchRegisterTab('phone')">Teléfono</div>
+            </div>
+            <div id="email-register">
+                <div class="form-group">
+                    <input type="email" id="register-email" placeholder="Correo electrónico">
+                </div>
+            </div>
+            <div id="phone-register" style="display: none;">
+                <div class="form-group">
+                    <input type="tel" id="register-phone" placeholder="Número de teléfono">
+                </div>
+            </div>
+            <div class="form-group">
+                <input type="password" id="register-password" placeholder="Contraseña">
+            </div>
+            <div class="form-group">
+                <input type="password" id="register-confirm-password" placeholder="Confirmar contraseña">
+            </div>
+            <div class="form-group">
+                <input type="text" id="referral-input" placeholder="Código de invitación (opcional)">
+            </div>
+            <button class="btn" onclick="registerUser()">Inscribirse</button>
+            <div class="switch-auth">
+                ¿Ya tienes cuenta? <a href="#" onclick="showLogin()">Accede aquí</a>
+            </div>
+        </div>
+
+        <!-- Dashboard Principal -->
+        <div id="dashboard" style="display: none;">
+            <!-- INICIO -->
+            <div id="home-tab" class="tab-content active">
+                <div class="welcome-banner">
+                    <div class="marquee-container">
+                        <div class="marquee-text">
+                            <span>¡$!</span> GANA DINERO TODOS LOS DÍAS - INVITA AMIGOS Y GANA MÁS - 
+                            <span>¡$!</span> RECOMPENSAS DIARIAS - MULTIPLICA TUS GANANCIAS - 
+                            <span>¡$!</span> SISTEMA DE REFERIDOS - HASTA 16% DE COMISIÓN -
+                            <span>¡$!</span> RETIROS INMEDIATOS - SOPORTE 24/7 -
+                        </div>
+                    </div>
+                    <div class="banner-subtitle">
+                        La plataforma Blue Arrow es para usuarios españoles
+                    </div>
+                </div>
+
+                <div class="balance-display">
+                    <div>Balance total</div>
+                    <div class="balance-amount" id="total-balance">0.00 USDT</div>
+                </div>
+
+                <div class="card">
+                    <h2 style="text-align: center; margin-bottom: 20px;">
+                        JOIN BLUE ARROW AND SHARE IN A BETTER LIFE.<br>
+                        MAKING MONEY EASY!
+                    </h2>
+                    
+                    <div class="action-buttons">
+                        <button class="action-btn-user" onclick="showRechargeScreen()">RECARGAR</button>
+                        <button class="action-btn-user withdraw" onclick="showWithdrawScreen()">RETIRAR</button>
+                    </div>
+
+                    <div class="activities-section">
+                        <h3>ACTIVIDADES</h3>
+                        <p style="text-align: center; color: #666; font-size: 0.9em;">
+                            ¡Participa en actividades y gana recompensas adicionales!
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIP -->
+            <div id="vip-tab" class="tab-content">
+                <div class="card">
+                    <h2>Planes de Inversión</h2>
+                    
+                    <!-- SVIP1 -->
+                    <div class="vip-level" id="svip1">
+                        <div style="text-align: center; font-size: 1.1em; font-weight: bold; margin-bottom: 15px; color: #1e3c72;">
+                            SVIP1
+                        </div>
+                        <div class="stats">
+                            <div>
+                                <div>Tareas diarias</div>
+                                <div style="font-weight: bold;">1</div>
+                            </div>
+                            <div>
+                                <div>Interés simple</div>
+                                <div style="font-weight: bold;">2.00</div>
+                            </div>
+                        </div>
+                        <div class="stats">
+                            <div>
+                                <div>Ganancia diaria</div>
+                                <div style="font-weight: bold; color: #27ae60;">2.00 USDT</div>
+                            </div>
+                            <div>
+                                <div>Beneficio total</div>
+                                <div style="font-weight: bold; color: #27ae60;">120.00 USDT</div>
+                            </div>
+                        </div>
+                        <div style="text-align: center; margin: 15px 0; font-weight: bold; color: #1e3c72;">
+                            20.00 USDT
+                        </div>
+                        <button class="unlock-btn" onclick="unlockVIP('svip1', 20)">
+                            Desbloquear ahora
+                        </button>
+                    </div>
+
+                    <!-- SVIP2 -->
+                    <div class="vip-level" id="svip2">
+                        <div style="text-align: center; font-size: 1.1em; font-weight: bold; margin-bottom: 15px; color: #1e3c72;">
+                            SVIP2
+                        </div>
+                        <div class="stats">
+                            <div>
+                                <div>Tareas diarias</div>
+                                <div style="font-weight: bold;">1</div>
+                            </div>
+                            <div>
+                                <div>Interés simple</div>
+                                <div style="font-weight: bold;">15.00</div>
+                            </div>
+                        </div>
+                        <div class="stats">
+                            <div>
+                                <div>Ganancia diaria</div>
+                                <div style="font-weight: bold; color: #27ae60;">15.00 USDT</div>
+                            </div>
+                            <div>
+                                <div>Beneficio total</div>
+                                <div style="font-weight: bold; color: #27ae60;">900.00 USDT</div>
+                            </div>
+                        </div>
+                        <div style="text-align: center; margin: 15px 0; font-weight: bold; color: #1e3c72;">
+                            150.00 USDT
+                        </div>
+                        <button class="unlock-btn" onclick="unlockVIP('svip2', 150)">
+                            Desbloquear ahora
+                        </button>
+                    </div>
+
+                    <!-- SVIP3 -->
+                    <div class="vip-level" id="svip3">
+                        <div style="text-align: center; font-size: 1.1em; font-weight: bold; margin-bottom: 15px; color: #1e3c72;">
+                            SVIP3
+                        </div>
+                        <div class="stats">
+                            <div>
+                                <div>Tareas diarias</div>
+                                <div style="font-weight: bold;">1</div>
+                            </div>
+                            <div>
+                                <div>Interés simple</div>
+                                <div style="font-weight: bold;">40.00</div>
+                            </div>
+                        </div>
+                        <div class="stats">
+                            <div>
+                                <div>Ganancia diaria</div>
+                                <div style="font-weight: bold; color: #27ae60;">40.00 USDT</div>
+                            </div>
+                            <div>
+                                <div>Beneficio total</div>
+                                <div style="font-weight: bold; color: #27ae60;">2,400.00 USDT</div>
+                            </div>
+                        </div>
+                        <div style="text-align: center; margin: 15px 0; font-weight: bold; color: #1e3c72;">
+                            400.00 USDT
+                        </div>
+                        <button class="unlock-btn" onclick="unlockVIP('svip3', 400)">
+                            Desbloquear ahora
+                        </button>
+                    </div>
+
+                    <!-- SVIP4 -->
+                    <div class="vip-level" id="svip4">
+                        <div style="text-align: center; font-size: 1.1em; font-weight: bold; margin-bottom: 15px; color: #1e3c72;">
+                            SVIP4
+                        </div>
+                        <div class="stats">
+                            <div>
+                                <div>Tareas diarias</div>
+                                <div style="font-weight: bold;">1</div>
+                            </div>
+                            <div>
+                                <div>Interés simple</div>
+                                <div style="font-weight: bold;">100.00</div>
+                            </div>
+                        </div>
+                        <div class="stats">
+                            <div>
+                                <div>Ganancia diaria</div>
+                                <div style="font-weight: bold; color: #27ae60;">100.00 USDT</div>
+                            </div>
+                            <div>
+                                <div>Beneficio total</div>
+                                <div style="font-weight: bold; color: #27ae60;">6,000.00 USDT</div>
+                            </div>
+                        </div>
+                        <div style="text-align: center; margin: 15px 0; font-weight: bold; color: #1e3c72;">
+                            1,000.00 USDT
+                        </div>
+                        <button class="unlock-btn" onclick="unlockVIP('svip4', 1000)">
+                            Desbloquear ahora
+                        </button>
+                    </div>
+
+                    <!-- SVIP5 -->
+                    <div class="vip-level" id="svip5">
+                        <div style="text-align: center; font-size: 1.1em; font-weight: bold; margin-bottom: 15px; color: #1e3c72;">
+                            SVIP5
+                        </div>
+                        <div class="stats">
+                            <div>
+                                <div>Tareas diarias</div>
+                                <div style="font-weight: bold;">1</div>
+                            </div>
+                            <div>
+                                <div>Interés simple</div>
+                                <div style="font-weight: bold;">250.00</div>
+                            </div>
+                        </div>
+                        <div class="stats">
+                            <div>
+                                <div>Ganancia diaria</div>
+                                <div style="font-weight: bold; color: #27ae60;">250.00 USDT</div>
+                            </div>
+                            <div>
+                                <div>Beneficio total</div>
+                                <div style="font-weight: bold; color: #27ae60;">15,000.00 USDT</div>
+                            </div>
+                        </div>
+                        <div style="text-align: center; margin: 15px 0; font-weight: bold; color: #1e3c72;">
+                            2,500.00 USDT
+                        </div>
+                        <button class="unlock-btn" onclick="unlockVIP('svip5', 2500)">
+                            Desbloquear ahora
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAREAS -->
+            <div id="tasks-tab" class="tab-content">
+                <div class="card">
+                    <div class="balance-display">
+                        <div>Balance total</div>
+                        <div class="balance-amount" id="tasks-balance">0.00</div>
+                    </div>
+
+                    <button class="complete-task-btn" onclick="completeTask()" id="complete-task-btn">
+                        Completar Tarea
+                    </button>
+
+                    <div class="countdown-timer" id="task-countdown">
+                        00:00:00
+                    </div>
+
+                    <div class="task-stats">
+                        <div class="stat-item">
+                            <div class="stat-value" id="total-tasks">0</div>
+                            <div class="stat-label">Todas las tareas para hoy</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="pending-tasks">0</div>
+                            <div class="stat-label">Las tareas pendientes de hoy</div>
+                        </div>
+                    </div>
+
+                    <div class="section-title">En curso</div>
+                    
+                    <div id="active-tasks-container">
+                        <!-- Tareas activas se cargan aquí dinámicamente -->
+                    </div>
+
+                    <div class="section-title">Terminado</div>
+                    
+                    <div id="completed-tasks-container">
+                        <!-- Tareas completadas se cargan aquí dinámicamente -->
+                    </div>
+
+                    <div id="no-tasks-message" class="no-data" style="display: none;">
+                        <div class="no-data-icon">📊</div>
+                        <div>Sin datos</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- EQUIPO -->
+            <div id="team-tab" class="tab-content">
+                <div class="card">
+                    <div class="team-header">
+                        <div class="team-title">BLUE ARROW</div>
+                    </div>
+
+                    <!-- Código de Invitación -->
+                    <div class="referral-section">
+                        <div class="referral-text">Código de invitación:</div>
+                        <div class="referral-code" id="referral-code">612726</div>
+                        <button class="copy-btn" onclick="copyReferralCode()">Copiar</button>
+                        
+                        <div class="referral-text">Comparte tu enlace de referencia y comienza a ganar</div>
+                        <div class="referral-link" id="referral-link">
+                            https://bluearrow.com/#/register?ref=612726
+                        </div>
+                        <button class="copy-btn" onclick="copyReferralLink()">Copiar</button>
+                    </div>
+
+                    <!-- Periodo de Selección -->
+                    <div class="selection-period">
+                        <div class="period-title">Periodo de selección</div>
+                        <div class="stats-grid">
+                            <div class="stat-item">
+                                <div class="stat-value">0</div>
+                                <div class="stat-label">Tamaño del equipo</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value">$0.00</div>
+                                <div class="stat-label">Recarga de equipo</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value">$0.00</div>
+                                <div class="stat-label">Retiro del equipo</div>
+                            </div>
+                        </div>
+                        
+                        <div class="team-stats">
+                            <div class="team-stat-item">
+                                <div class="team-stat-main">0</div>
+                                <div class="team-stat-sub">Nuevo equipo</div>
+                            </div>
+                            <div class="team-stat-item">
+                                <div class="team-stat-main">0</div>
+                                <div class="team-stat-sub">Recarga por primera vez</div>
+                            </div>
+                            <div class="team-stat-item">
+                                <div class="team-stat-main">0</div>
+                                <div class="team-stat-sub">Primer retiro</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- NIVEL 1 -->
+                    <div class="level-section">
+                        <div class="level-header">
+                            <div class="level-title">NIVEL 1</div>
+                            <div class="level-stats">0/0</div>
+                        </div>
+                        <div class="commission-label">Registro/Válido</div>
+                        
+                        <div class="commission-percentage">16%</div>
+                        <div class="commission-label">Porcentaje de comisión</div>
+                        
+                        <div class="earnings-section">
+                            <div class="earnings-value">0</div>
+                            <div class="earnings-label">Ingresos totales</div>
+                        </div>
+                    </div>
+
+                    <!-- NIVEL 2 -->
+                    <div class="level-section">
+                        <div class="level-header">
+                            <div class="level-title">NIVEL 2</div>
+                            <div class="level-stats">0/0</div>
+                        </div>
+                        <div class="commission-label">Registro/Válido</div>
+                        
+                        <div class="commission-percentage">3%</div>
+                        <div class="commission-label">Porcentaje de comisión</div>
+                        
+                        <div class="earnings-section">
+                            <div class="earnings-value">0</div>
+                            <div class="earnings-label">Ingresos totales</div>
+                        </div>
+                    </div>
+
+                    <!-- NIVEL 3 -->
+                    <div class="level-section">
+                        <div class="level-header">
+                            <div class="level-title">NIVEL 3</div>
+                            <div class="level-stats">0/0</div>
+                        </div>
+                        <div class="commission-label">Registro/Válido</div>
+                        
+                        <div class="commission-percentage">2%</div>
+                        <div class="commission-label">Porcentaje de comisión</div>
+                        
+                        <div class="earnings-section">
+                            <div class="earnings-value">0</div>
+                            <div class="earnings-label">Ingresos totales</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PERFIL -->
+            <div id="profile-tab" class="tab-content">
+                <div class="card">
+                    <div class="profile-header">
+                        <div class="profile-title">BLUE ARROW</div>
+                    </div>
+
+                    <!-- Información de la Cuenta -->
+                    <div class="account-info">
+                        <div class="info-row">
+                            <div class="info-label">Cuenta:</div>
+                            <div class="info-value email" id="profile-email">user@example.com</div>
+                        </div>
+                        <div class="info-row">
+                            <div class="info-label">Código de invitación:</div>
+                            <div class="info-value" id="profile-referral-code">612726</div>
+                        </div>
+                    </div>
+
+                    <!-- Sección de Recarga -->
+                    <div class="recharge-section">
+                        <div class="recharge-title">Recargar</div>
+                        <div class="balance-row">
+                            <div class="balance-label">Balance total (USDT)</div>
+                            <div class="balance-amount-profile" id="profile-total-balance">0</div>
+                        </div>
+                        <div class="balance-row">
+                            <div class="balance-label">Monto de recarga (USDT)</div>
+                            <div class="balance-amount-profile" id="profile-recharge-amount">0.00</div>
+                        </div>
+                    </div>
+
+                    <!-- Opciones de Cuenta -->
+                    <div class="account-options">
+                        <div class="option-item" onclick="showFinancialRecords()">
+                            <div class="option-icon">📊</div>
+                            <div class="option-text">Registros financieros</div>
+                            <div class="option-arrow">›</div>
+                        </div>
+                        <div class="option-item" onclick="showTransfer()">
+                            <div class="option-icon">🔄</div>
+                            <div class="option-text">Transferir</div>
+                            <div class="option-arrow">›</div>
+                        </div>
+                        <div class="option-item" onclick="showChangePassword()">
+                            <div class="option-icon">🔒</div>
+                            <div class="option-text">Cambiar la contraseña</div>
+                            <div class="option-arrow">›</div>
+                        </div>
+                    </div>
+
+                    <!-- Botón de Desconectar -->
+                    <button class="logout-btn" onclick="logout()">
+                        Desconectar
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pantalla de Recarga -->
+        <div id="recharge-screen" class="card" style="display: none;">
+            <div class="screen-header">
+                <button class="back-btn" onclick="showDashboard()">←</button>
+                <h1>Recargar</h1>
+            </div>
+
+            <div class="form-group">
+                <label style="font-weight: bold;">Cantidad a Recargar (USDT)</label>
+                <input type="number" id="recharge-amount" placeholder="Ej: 20.00" min="1" step="0.01">
+            </div>
+
+            <div class="network-list">
+                <div class="network-item" onclick="selectNetwork(this, 'POLYGON-USDC')">POLYGON-USDC</div>
+                <div class="network-item" onclick="selectNetwork(this, 'POLYGON-USDT')">POLYGON-USDT</div>
+                <div class="network-item" onclick="selectNetwork(this, 'BEP20-USDT')">BEP20-USDT</div>
+                <div class="network-item" onclick="selectNetwork(this, 'BEP20-USDC')">BEP20-USDC</div>
+                <div class="network-item" onclick="selectNetwork(this, 'ETH-USDT')">ETH-USDT</div>
+                <div class="network-item" onclick="selectNetwork(this, 'ETH-USDC')">ETH-USDC</div>
+                <div class="network-item" onclick="selectNetwork(this, 'TRC20-USDT')">TRC20-USDT</div>
+                <div class="network-item" onclick="selectNetwork(this, 'BNB')">BNB</div>
+                <div class="network-item" onclick="selectNetwork(this, 'ETH')">ETH</div>
+            </div>
+
+            <div class="address-box" id="address-container" style="display: none;">
+                <strong>DIRECCIÓN <span id="selected-network"></span></strong><br>
+                <div id="wallet-address">Selecciona una red para ver la dirección</div>
+                <button class="copy-btn" onclick="copyAddress()">Copiar Dirección</button>
+            </div>
+
+            <button class="btn btn-success" id="complete-recharge-btn" style="display: none;" onclick="completeRecharge()">
+                ✅ Completar Recarga
+            </button>
+
+            <div class="success-message" id="recharge-success" style="display: none;">
+                Recarga completada<br>
+                <small>¡Bienvenido a Blue Arrow para permitir que los activos de cifrado generen ingresos sostenibles para a usted de verdad!</small>
+            </div>
+        </div>
+
+        <!-- Pantalla de Retiro -->
+        <div id="withdraw-screen" class="card" style="display: none;">
+            <div class="screen-header">
+                <button class="back-btn" onclick="showDashboard()">←</button>
+                <h1>Retirar</h1>
+            </div>
+
+            <div style="text-align: center; color: #666; margin-bottom: 20px;">
+                retiro 24 horas
+            </div>
+
+            <div class="balance-display">
+                <div>Balance total</div>
+                <div class="balance-amount" id="withdraw-balance">0.00 USDT</div>
+            </div>
+
+            <div class="form-group">
+                <label style="font-weight: bold;">Cantidad a Retirar (USDT)</label>
+                <div class="withdraw-amount-group">
+                    <input type="number" id="withdraw-amount" placeholder="Ej: 50.00" min="2" max="9999999" step="0.01">
+                    <button class="max-btn" onclick="setMaxAmount()">MÁXIMO</button>
+                </div>
+            </div>
+
+            <div class="withdrawal-info">
+                <strong>Método de retiro:</strong>
+                <div class="network-list">
+                    <div class="network-item" onclick="selectWithdrawNetwork(this)">POLYGON-USDC</div>
+                    <div class="network-item" onclick="selectWithdrawNetwork(this)">POLYGON-USDT</div>
+                    <div class="network-item" onclick="selectWithdrawNetwork(this)">BEP20-USDT</div>
+                    <div class="network-item" onclick="selectWithdrawNetwork(this)">BEP20-USDC</div>
+                    <div class="network-item" onclick="selectWithdrawNetwork(this)">ETH-USDT</div>
+                    <div class="network-item" onclick="selectWithdrawNetwork(this)">ETH-USDC</div>
+                    <div class="network-item" onclick="selectWithdrawNetwork(this)">TRC20-USDT</div>
+                </div>
+            </div>
+
+            <div class="withdrawal-info">
+                <strong>Información del contacto</strong><br>
+                <input type="text" id="withdraw-address" placeholder="Dirección de retiro" style="width: 100%; margin-top: 10px;">
+            </div>
+
+            <div class="form-group">
+                <strong>Contraseña</strong>
+                <input type="password" id="withdraw-password" placeholder="Ingrese su contraseña">
+            </div>
+
+            <div class="confirm-section">
+                <button class="btn" onclick="processWithdrawal()">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navegación Inferior -->
+    <div class="bottom-nav" id="bottom-nav" style="display: none;">
+        <div class="nav-item active" onclick="showAppTab('home')">
+            <span class="nav-icon">🏠</span>
+            Hogar
+        </div>
+        <div class="nav-item" onclick="showAppTab('vip')">
+            <span class="nav-icon">⭐</span>
+            VIP
+        </div>
+        <div class="nav-item" onclick="showAppTab('tasks')">
+            <span class="nav-icon">📋</span>
+            Tarea
+        </div>
+        <div class="nav-item" onclick="showAppTab('team')">
+            <span class="nav-icon">👥</span>
+            Equipo
+        </div>
+        <div class="nav-item" onclick="showAppTab('profile')">
+            <span class="nav-icon">👤</span>
+            A mí
+        </div>
+    </div>
+
+    <script>
+        // Configuración de Firebase con tu proyecto
+        const firebaseConfig = {
+            apiKey: "AIzaSyB0VgWYA3B6wnu5yFQC4criTDJqJGlcGBM",
+            authDomain: "black-arrow-69504.firebaseapp.com",
+            projectId: "black-arrow-69504",
+            storageBucket: "black-arrow-69504.firebasestorage.app",
+            messagingSenderId: "698111237597",
+            appId: "1:698111237597:web:3f918e8f26e2844f31aa34",
+            measurementId: "G-7V92VZ1ZB9"
+        };
+
+        // Inicializar Firebase
+        try {
+            firebase.initializeApp(firebaseConfig);
+            console.log("Firebase inicializado correctamente");
+        } catch (error) {
+            console.error("Error inicializando Firebase:", error);
+        }
+        
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+
+        // Estado de la aplicación
+        const userState = {
+            currentUser: null,
+            activeVIP: null,
+            tasks: [],
+            balance: 0,
+            rechargeAmount: 0,
+            teamMembers: [],
+            userInfo: {
+                email: '',
+                phone: '',
+                referralCode: '',
+                password: ''
+            },
+            walletAddresses: {
+                'POLYGON-USDC': '0x1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b',
+                'POLYGON-USDT': '0x2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c',
+                'BEP20-USDT': '0x3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d',
+                'BEP20-USDC': '0x4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e',
+                'ETH-USDT': '0x5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f',
+                'ETH-USDC': '0x6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a',
+                'TRC20-USDT': 'TXYZ1234567890abcdefghijklmnopqrstuvwxyz',
+                'BNB': 'bnb1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a',
+                'ETH': '0x7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b'
+            }
+        };
+
+        // Contraseña de administración
+        const ADMIN_PASSWORD = "admin123";
+
+        // =============================================
+        // FUNCIONES DE ADMINISTRACIÓN
+        // =============================================
+
+        function showAdminLogin() {
+            hideAllScreens();
+            document.getElementById('admin-login').style.display = 'block';
+        }
+
+        function loginAdmin() {
+            const password = document.getElementById('admin-password').value;
+            
+            if (password === ADMIN_PASSWORD) {
+                document.getElementById('admin-login').style.display = 'none';
+                document.getElementById('admin-panel').style.display = 'block';
+                loadAdminData();
+                showNotification('✅ Acceso de administrador concedido');
+            } else {
+                showNotification('❌ Contraseña de administración incorrecta', 'error');
+            }
+        }
+
+        function logoutAdmin() {
+            document.getElementById('admin-panel').style.display = 'none';
+            document.getElementById('admin-login').style.display = 'none';
+            showLogin();
+            showNotification('👋 Sesión de administrador cerrada');
+        }
+
+        function showAdminTab(tabName) {
+            document.querySelectorAll('.admin-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            document.querySelectorAll('.admin-section').forEach(section => {
+                section.classList.remove('active');
+            });
+            
+            document.querySelector(`.admin-tab:nth-child(${['users', 'recharges', 'withdrawals'].indexOf(tabName) + 1})`).classList.add('active');
+            document.getElementById(`${tabName}-tab`).classList.add('active');
+        }
+
+        async function loadAdminData() {
+            try {
+                // Cargar usuarios
+                const usersSnapshot = await db.collection('users').get();
+                const usersTableBody = document.getElementById('users-table-body');
+                usersTableBody.innerHTML = '';
+                
+                let totalUsers = 0;
+                
+                usersSnapshot.forEach(doc => {
+                    const user = doc.data();
+                    totalUsers++;
+                    
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${user.email || user.phone}</td>
+                        <td>${user.balance || 0} USDT</td>
+                        <td>${user.activeVIP || 'Ninguno'}</td>
+                        <td>${new Date(user.createdAt?.toDate()).toLocaleDateString()}</td>
+                        <td>
+                            <button class="action-btn delete-btn" onclick="deleteUser('${doc.id}')">
+                                Eliminar
+                            </button>
+                        </td>
+                    `;
+                    usersTableBody.appendChild(row);
+                });
+                
+                document.getElementById('total-users').textContent = totalUsers;
+                
+                // Cargar recargas pendientes
+                const rechargesSnapshot = await db.collection('recharges')
+                    .where('status', '==', 'pending')
+                    .get();
+                
+                const rechargesTableBody = document.getElementById('recharges-table-body');
+                rechargesTableBody.innerHTML = '';
+                
+                let pendingRecharges = 0;
+                
+                rechargesSnapshot.forEach(doc => {
+                    const recharge = doc.data();
+                    pendingRecharges++;
+                    
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${recharge.userEmail}</td>
+                        <td>${recharge.amount} USDT</td>
+                        <td>${recharge.network}</td>
+                        <td>${new Date(recharge.createdAt?.toDate()).toLocaleDateString()}</td>
+                        <td>
+                            <button class="action-btn approve-btn" onclick="approveRecharge('${doc.id}')">
+                                Aprobar
+                            </button>
+                            <button class="action-btn reject-btn" onclick="rejectRecharge('${doc.id}')">
+                                Rechazar
+                            </button>
+                        </td>
+                    `;
+                    rechargesTableBody.appendChild(row);
+                });
+                
+                document.getElementById('pending-recharges').textContent = pendingRecharges;
+                
+                // Cargar retiros pendientes
+                const withdrawalsSnapshot = await db.collection('withdrawals')
+                    .where('status', '==', 'pending')
+                    .get();
+                
+                const withdrawalsTableBody = document.getElementById('withdrawals-table-body');
+                withdrawalsTableBody.innerHTML = '';
+                
+                let pendingWithdrawals = 0;
+                
+                withdrawalsSnapshot.forEach(doc => {
+                    const withdrawal = doc.data();
+                    pendingWithdrawals++;
+                    
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${withdrawal.userEmail}</td>
+                        <td>${withdrawal.amount} USDT</td>
+                        <td>${withdrawal.address}</td>
+                        <td>${new Date(withdrawal.createdAt?.toDate()).toLocaleDateString()}</td>
+                        <td>
+                            <button class="action-btn approve-btn" onclick="approveWithdrawal('${doc.id}')">
+                                Aprobar
+                            </button>
+                            <button class="action-btn reject-btn" onclick="rejectWithdrawal('${doc.id}')">
+                                Rechazar
+                            </button>
+                        </td>
+                    `;
+                    withdrawalsTableBody.appendChild(row);
+                });
+                
+                document.getElementById('pending-withdrawals').textContent = pendingWithdrawals;
+                
+            } catch (error) {
+                console.error('Error cargando datos de administración:', error);
+                showNotification('❌ Error cargando datos de administración', 'error');
+            }
+        }
+
+        async function deleteUser(userId) {
+            if (confirm('¿Estás seguro de que quieres eliminar este usuario? Esta acción no se puede deshacer.')) {
+                try {
+                    await db.collection('users').doc(userId).delete();
+                    showNotification('✅ Usuario eliminado correctamente');
+                    loadAdminData();
+                } catch (error) {
+                    console.error('Error eliminando usuario:', error);
+                    showNotification('❌ Error eliminando usuario', 'error');
+                }
+            }
+        }
+
+        async function approveRecharge(rechargeId) {
+            try {
+                const rechargeDoc = await db.collection('recharges').doc(rechargeId).get();
+                const recharge = rechargeDoc.data();
+                
+                // Actualizar saldo del usuario
+                const userDoc = await db.collection('users').doc(recharge.userId).get();
+                const user = userDoc.data();
+                
+                const newBalance = (user.balance || 0) + recharge.amount;
+                
+                await db.collection('users').doc(recharge.userId).update({
+                    balance: newBalance
+                });
+                
+                // Marcar recarga como aprobada
+                await db.collection('recharges').doc(rechargeId).update({
+                    status: 'approved',
+                    approvedAt: new Date()
+                });
+                
+                showNotification(`✅ Recarga de ${recharge.amount} USDT aprobada para ${recharge.userEmail}`);
+                loadAdminData();
+                
+            } catch (error) {
+                console.error('Error aprobando recarga:', error);
+                showNotification('❌ Error aprobando recarga', 'error');
+            }
+        }
+
+        async function rejectRecharge(rechargeId) {
+            try {
+                await db.collection('recharges').doc(rechargeId).update({
+                    status: 'rejected',
+                    rejectedAt: new Date()
+                });
+                
+                showNotification('❌ Recarga rechazada');
+                loadAdminData();
+                
+            } catch (error) {
+                console.error('Error rechazando recarga:', error);
+                showNotification('❌ Error rechazando recarga', 'error');
+            }
+        }
+
+        async function approveWithdrawal(withdrawalId) {
+            try {
+                const withdrawalDoc = await db.collection('withdrawals').doc(withdrawalId).get();
+                const withdrawal = withdrawalDoc.data();
+                
+                // Actualizar saldo del usuario
+                const userDoc = await db.collection('users').doc(withdrawal.userId).get();
+                const user = userDoc.data();
+                
+                const newBalance = (user.balance || 0) - withdrawal.amount;
+                
+                await db.collection('users').doc(withdrawal.userId).update({
+                    balance: newBalance
+                });
+                
+                // Marcar retiro como aprobado
+                await db.collection('withdrawals').doc(withdrawalId).update({
+                    status: 'approved',
+                    approvedAt: new Date()
+                });
+                
+                showNotification(`✅ Retiro de ${withdrawal.amount} USDT aprobado para ${withdrawal.userEmail}`);
+                loadAdminData();
+                
+            } catch (error) {
+                console.error('Error aprobando retiro:', error);
+                showNotification('❌ Error aprobando retiro', 'error');
+            }
+        }
+
+        async function rejectWithdrawal(withdrawalId) {
+            try {
+                await db.collection('withdrawals').doc(withdrawalId).update({
+                    status: 'rejected',
+                    rejectedAt: new Date()
+                });
+                
+                showNotification('❌ Retiro rechazado');
+                loadAdminData();
+                
+            } catch (error) {
+                console.error('Error rechazando retiro:', error);
+                showNotification('❌ Error rechazando retiro', 'error');
+            }
+        }
+
+        // =============================================
+        // FUNCIONES DE USUARIO - CORREGIDAS
+        // =============================================
+
+        async function loginUser() {
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            
+            if (!email || !password) {
+                showNotification('❌ Por favor, completa todos los campos', 'error');
+                return;
+            }
+            
+            try {
+                // Mostrar indicador de carga
+                const loginBtn = document.querySelector('#login-page .btn');
+                loginBtn.textContent = 'Cargando...';
+                loginBtn.classList.add('loading');
+                
+                // Buscar usuario en Firestore
+                const usersSnapshot = await db.collection('users')
+                    .where('email', '==', email)
+                    .get();
+                
+                if (usersSnapshot.empty) {
+                    showNotification('❌ Usuario no encontrado', 'error');
+                    loginBtn.textContent = 'Acceder';
+                    loginBtn.classList.remove('loading');
+                    return;
+                }
+                
+                const userDoc = usersSnapshot.docs[0];
+                const user = userDoc.data();
+                
+                // Verificar contraseña
+                if (user.password !== password) {
+                    showNotification('❌ Contraseña incorrecta', 'error');
+                    loginBtn.textContent = 'Acceder';
+                    loginBtn.classList.remove('loading');
+                    return;
+                }
+                
+                // Establecer usuario actual
+                userState.currentUser = {
+                    id: userDoc.id,
+                    ...user
+                };
+                
+                // Actualizar estado de la aplicación
+                userState.balance = user.balance || 0;
+                userState.activeVIP = user.activeVIP || null;
+                userState.userInfo.email = user.email;
+                userState.userInfo.phone = user.phone;
+                userState.userInfo.referralCode = user.referralCode;
+                
+                showDashboard();
+                showNotification(`✅ Bienvenido de nuevo, ${user.email}`);
+                
+            } catch (error) {
+                console.error('Error en login:', error);
+                showNotification('❌ Error al iniciar sesión', 'error');
+                
+                // Restaurar botón
+                const loginBtn = document.querySelector('#login-page .btn');
+                loginBtn.textContent = 'Acceder';
+                loginBtn.classList.remove('loading');
+            }
+        }
+
+        async function registerUser() {
+            const emailTab = document.querySelector('.tab-btn.active').textContent === 'Correo';
+            const email = emailTab ? document.getElementById('register-email').value : '';
+            const phone = !emailTab ? document.getElementById('register-phone').value : '';
+            const password = document.getElementById('register-password').value;
+            const confirmPassword = document.getElementById('register-confirm-password').value;
+            const referralCode = document.getElementById('referral-input').value;
+            
+            // Validaciones
+            if (emailTab && !email) {
+                showNotification('❌ Por favor, ingresa un email', 'error');
+                return;
+            }
+            
+            if (!emailTab && !phone) {
+                showNotification('❌ Por favor, ingresa un teléfono', 'error');
+                return;
+            }
+            
+            if (!password) {
+                showNotification('❌ Por favor, ingresa una contraseña', 'error');
+                return;
+            }
+            
+            if (password.length < 6) {
+                showNotification('❌ La contraseña debe tener al menos 6 caracteres', 'error');
+                return;
+            }
+            
+            if (password !== confirmPassword) {
+                showNotification('❌ Las contraseñas no coinciden', 'error');
+                return;
+            }
+            
+            try {
+                // Mostrar indicador de carga
+                const registerBtn = document.querySelector('#register-page .btn');
+                registerBtn.textContent = 'Registrando...';
+                registerBtn.classList.add('loading');
+                
+                // Verificar si el usuario ya existe
+                let existingUser;
+                if (emailTab) {
+                    existingUser = await db.collection('users')
+                        .where('email', '==', email)
+                        .get();
+                } else {
+                    existingUser = await db.collection('users')
+                        .where('phone', '==', phone)
+                        .get();
+                }
+                
+                if (!existingUser.empty) {
+                    showNotification('❌ Ya existe un usuario con estos datos', 'error');
+                    registerBtn.textContent = 'Inscribirse';
+                    registerBtn.classList.remove('loading');
+                    return;
+                }
+                
+                // Generar código de referencia único
+                const generatedReferralCode = Math.floor(100000 + Math.random() * 900000).toString();
+                
+                // Crear nuevo usuario
+                const newUser = {
+                    email: email,
+                    phone: phone,
+                    password: password,
+                    referralCode: generatedReferralCode,
+                    balance: 0,
+                    activeVIP: null,
+                    createdAt: new Date(),
+                    referredBy: referralCode || null
+                };
+                
+                await db.collection('users').add(newUser);
+                
+                showNotification('✅ ¡Registro exitoso! Ahora puedes iniciar sesión');
+                showLogin();
+                
+            } catch (error) {
+                console.error('Error en registro:', error);
+                showNotification('❌ Error al registrar usuario: ' + error.message, 'error');
+                
+                // Restaurar botón
+                const registerBtn = document.querySelector('#register-page .btn');
+                registerBtn.textContent = 'Inscribirse';
+                registerBtn.classList.remove('loading');
+            }
+        }
+
+        async function completeRecharge() {
+            const amount = parseFloat(document.getElementById('recharge-amount').value);
+            const selectedNetwork = document.querySelector('.network-item.selected');
+            
+            if (!amount || amount <= 0) {
+                showNotification('❌ Ingresa una cantidad válida', 'error');
+                return;
+            }
+            
+            if (!selectedNetwork) {
+                showNotification('❌ Selecciona una red', 'error');
+                return;
+            }
+            
+            const network = selectedNetwork.textContent;
+            
+            try {
+                // Guardar recarga pendiente en Firestore
+                await db.collection('recharges').add({
+                    userId: userState.currentUser.id,
+                    userEmail: userState.currentUser.email,
+                    amount: amount,
+                    network: network,
+                    status: 'pending',
+                    createdAt: new Date()
+                });
+                
+                document.getElementById('recharge-success').style.display = 'block';
+                document.getElementById('complete-recharge-btn').style.display = 'none';
+                
+                showNotification(`✅ Recarga solicitada: ${amount.toFixed(2)} USDT. Espera aprobación.`);
+                
+            } catch (error) {
+                console.error('Error solicitando recarga:', error);
+                showNotification('❌ Error al solicitar recarga', 'error');
+            }
+        }
+
+        async function processWithdrawal() {
+            const amount = parseFloat(document.getElementById('withdraw-amount').value);
+            const address = document.getElementById('withdraw-address').value;
+            const password = document.getElementById('withdraw-password').value;
+
+            if (!amount || amount < 2) {
+                showNotification('❌ La cantidad mínima de retiro es 2 USDT', 'error');
+                return;
+            }
+
+            if (amount > userState.balance) {
+                showNotification('❌ Saldo insuficiente para este retiro', 'error');
+                return;
+            }
+
+            if (!address) {
+                showNotification('❌ Ingresa una dirección de retiro válida', 'error');
+                return;
+            }
+
+            if (password !== userState.currentUser.password) {
+                showNotification('❌ Contraseña incorrecta', 'error');
+                return;
+            }
+
+            try {
+                // Guardar retiro pendiente en Firestore
+                await db.collection('withdrawals').add({
+                    userId: userState.currentUser.id,
+                    userEmail: userState.currentUser.email,
+                    amount: amount,
+                    address: address,
+                    status: 'pending',
+                    createdAt: new Date()
+                });
+                
+                showNotification(`✅ Retiro solicitado: ${amount.toFixed(2)} USDT. Espera aprobación.`);
+                showDashboard();
+                
+            } catch (error) {
+                console.error('Error solicitando retiro:', error);
+                showNotification('❌ Error al solicitar retiro', 'error');
+            }
+        }
+
+        async function unlockVIP(vipId, amount) {
+            if (userState.balance < amount) {
+                showNotification('❌ Saldo insuficiente para desbloquear este VIP', 'error');
+                return;
+            }
+            
+            if (confirm(`¿Estás seguro de que quieres desbloquear ${vipId.toUpperCase()} por ${amount.toLocaleString()} USDT?`)) {
+                try {
+                    // Actualizar usuario en Firestore
+                    await db.collection('users').doc(userState.currentUser.id).update({
+                        activeVIP: vipId,
+                        balance: userState.balance - amount
+                    });
+                    
+                    // Actualizar estado local
+                    userState.balance -= amount;
+                    userState.activeVIP = vipId;
+                    
+                    // Actualizar interfaz
+                    document.querySelectorAll('.vip-level').forEach(level => {
+                        level.classList.remove('active');
+                    });
+                    document.getElementById(vipId).classList.add('active');
+                    
+                    const button = document.querySelector(`#${vipId} .unlock-btn`);
+                    button.textContent = '✅ VIP ACTIVO';
+                    button.classList.add('unlocked');
+                    button.disabled = true;
+                    
+                    // Generar tarea inicial automáticamente
+                    generateTask();
+                    showNotification(`🎉 ¡Felicidades! Has activado ${vipId.toUpperCase()} por ${amount.toLocaleString()} USDT`);
+                    updateUI();
+                    
+                } catch (error) {
+                    console.error('Error activando VIP:', error);
+                    showNotification('❌ Error al activar VIP', 'error');
+                }
+            }
+        }
+
+        // =============================================
+        // FUNCIONES AUXILIARES
+        // =============================================
+
+        function showNotification(message, type = 'success') {
+            const notification = document.createElement('div');
+            notification.className = `notification ${type === 'error' ? 'error' : ''}`;
+            notification.textContent = message;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+
+        function showLogin() {
+            hideAllScreens();
+            document.getElementById('login-page').style.display = 'block';
+        }
+
+        function showRegister() {
+            hideAllScreens();
+            document.getElementById('register-page').style.display = 'block';
+        }
+
+        function showDashboard() {
+            hideAllScreens();
+            document.getElementById('dashboard').style.display = 'block';
+            document.getElementById('bottom-nav').style.display = 'flex';
+            showAppTab('home');
+            updateUI();
+        }
+
+        function logout() {
+            if (confirm('¿Estás seguro de que quieres desconectarte?')) {
+                hideAllScreens();
+                document.getElementById('login-page').style.display = 'block';
+                showNotification('👋 Sesión cerrada correctamente');
+            }
+        }
+
+        function hideAllScreens() {
+            document.getElementById('login-page').style.display = 'none';
+            document.getElementById('register-page').style.display = 'none';
+            document.getElementById('dashboard').style.display = 'none';
+            document.getElementById('recharge-screen').style.display = 'none';
+            document.getElementById('withdraw-screen').style.display = 'none';
+            document.getElementById('admin-panel').style.display = 'none';
+            document.getElementById('admin-login').style.display = 'none';
+            document.getElementById('bottom-nav').style.display = 'none';
+        }
+
+        function switchRegisterTab(type) {
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            if (type === 'email') {
+                document.getElementById('email-register').style.display = 'block';
+                document.getElementById('phone-register').style.display = 'none';
+            } else {
+                document.getElementById('email-register').style.display = 'none';
+                document.getElementById('phone-register').style.display = 'block';
+            }
+        }
+
+        function showAppTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            
+            document.getElementById(tabName + '-tab').classList.add('active');
+            
+            const navItems = document.querySelectorAll('.nav-item');
+            const tabIndex = ['home', 'vip', 'tasks', 'team', 'profile'].indexOf(tabName);
+            if (tabIndex !== -1) {
+                navItems[tabIndex].classList.add('active');
+            }
+        }
+
+        function showRechargeScreen() {
+            hideAllScreens();
+            document.getElementById('recharge-screen').style.display = 'block';
+            resetRechargeScreen();
+        }
+
+        function resetRechargeScreen() {
+            document.querySelectorAll('.network-item').forEach(item => {
+                item.classList.remove('selected');
+            });
+            document.getElementById('address-container').style.display = 'none';
+            document.getElementById('complete-recharge-btn').style.display = 'none';
+            document.getElementById('recharge-success').style.display = 'none';
+            document.getElementById('recharge-amount').value = '';
+        }
+
+        function selectNetwork(element, network) {
+            document.querySelectorAll('.network-item').forEach(item => {
+                item.classList.remove('selected');
+            });
+            element.classList.add('selected');
+            
+            document.getElementById('selected-network').textContent = `(${network})`;
+            document.getElementById('wallet-address').textContent = userState.walletAddresses[network];
+            document.getElementById('address-container').style.display = 'block';
+            document.getElementById('complete-recharge-btn').style.display = 'block';
+        }
+
+        function copyAddress() {
+            const address = document.getElementById('wallet-address').textContent;
+            navigator.clipboard.writeText(address).then(() => {
+                showNotification('✅ Dirección copiada al portapapeles');
+            });
+        }
+
+        function showWithdrawScreen() {
+            hideAllScreens();
+            document.getElementById('withdraw-screen').style.display = 'block';
+            updateWithdrawUI();
+        }
+
+        function updateWithdrawUI() {
+            document.getElementById('withdraw-balance').textContent = userState.balance.toFixed(2) + ' USDT';
+            document.getElementById('withdraw-amount').value = '';
+            document.getElementById('withdraw-address').value = '';
+            document.getElementById('withdraw-password').value = '';
+        }
+
+        function setMaxAmount() {
+            document.getElementById('withdraw-amount').value = userState.balance.toFixed(2);
+        }
+
+        function selectWithdrawNetwork(element) {
+            document.querySelectorAll('#withdraw-screen .network-item').forEach(item => {
+                item.classList.remove('selected');
+            });
+            element.classList.add('selected');
+        }
+
+        function updateUI() {
+            document.getElementById('total-balance').textContent = userState.balance.toFixed(2) + ' USDT';
+            document.getElementById('tasks-balance').textContent = userState.balance.toFixed(2);
+            document.getElementById('withdraw-balance').textContent = userState.balance.toFixed(2) + ' USDT';
+            
+            document.getElementById('profile-email').textContent = userState.userInfo.email;
+            document.getElementById('profile-referral-code').textContent = userState.userInfo.referralCode;
+            document.getElementById('profile-total-balance').textContent = userState.balance.toFixed(0);
+            document.getElementById('profile-recharge-amount').textContent = userState.rechargeAmount.toFixed(2);
+        }
+
+        // Funciones de tareas (simplificadas para el ejemplo)
+        function generateTask() {
+            if (userState.activeVIP) {
+                const task = {
+                    id: Date.now(),
+                    vipLevel: userState.activeVIP,
+                    completed: false,
+                    reward: getTaskRewardAmount(userState.activeVIP),
+                    nextTaskTime: null
+                };
+                userState.tasks = [task];
+                updateTasksUI();
+            }
+        }
+
+        function getTaskRewardAmount(vipLevel) {
+            const rewards = {
+                'svip1': 2.00,
+                'svip2': 15.00,
+                'svip3': 40.00,
+                'svip4': 100.00,
+                'svip5': 250.00
+            };
+            return rewards[vipLevel] || 0;
+        }
+
+        function updateTasksUI() {
+            const totalTasks = userState.tasks.length;
+            const pendingTasks = userState.tasks.filter(task => !task.completed).length;
+
+            document.getElementById('total-tasks').textContent = totalTasks;
+            document.getElementById('pending-tasks').textContent = pendingTasks;
+
+            const completeBtn = document.getElementById('complete-task-btn');
+            if (pendingTasks > 0) {
+                completeBtn.disabled = false;
+                completeBtn.textContent = 'Completar Tarea';
+            } else {
+                completeBtn.disabled = true;
+                completeBtn.textContent = 'No hay tareas pendientes';
+            }
+        }
+
+        function completeTask() {
+            const activeTask = userState.tasks.find(task => !task.completed);
+            
+            if (!activeTask) {
+                showNotification('❌ No hay tareas pendientes para completar', 'error');
+                return;
+            }
+
+            showTaskAnimation();
+            
+            setTimeout(() => {
+                userState.balance += activeTask.reward;
+                activeTask.completed = true;
+                activeTask.completedTime = Date.now();
+                activeTask.nextTaskTime = Date.now() + 24 * 60 * 60 * 1000;
+                
+                showNotification(`✅ ¡Tarea completada! +${activeTask.reward.toFixed(2)} USDT añadidos a tu balance`);
+                updateUI();
+                updateTasksUI();
+                
+            }, 2000);
+        }
+
+        function showTaskAnimation() {
+            const overlay = document.createElement('div');
+            overlay.className = 'task-animation-overlay';
+            
+            const spinner = document.createElement('div');
+            spinner.className = 'task-spinner';
+            
+            const text = document.createElement('div');
+            text.className = 'task-animation-text';
+            text.textContent = 'Completando tarea...';
+            
+            overlay.appendChild(spinner);
+            overlay.appendChild(text);
+            document.body.appendChild(overlay);
+            
+            setTimeout(() => {
+                overlay.remove();
+            }, 2000);
+        }
+
+        function copyReferralCode() {
+            navigator.clipboard.writeText(userState.userInfo.referralCode).then(() => {
+                showNotification('✅ Código de invitación copiado');
+            });
+        }
+
+        function copyReferralLink() {
+            const link = `https://bluearrow.com/#/register?ref=${userState.userInfo.referralCode}`;
+            navigator.clipboard.writeText(link).then(() => {
+                showNotification('✅ Enlace de referencia copiado');
+            });
+        }
+
+        function showFinancialRecords() {
+            showNotification('📊 Registros financieros - Próximamente');
+        }
+
+        function showTransfer() {
+            showNotification('🔄 Transferir - Próximamente');
+        }
+
+        function showChangePassword() {
+            showNotification('🔒 Cambiar contraseña - Próximamente');
+        }
+
+        // Inicializar
+        showLogin();
+        updateUI();
+    </script>
+</body>
+</html>
