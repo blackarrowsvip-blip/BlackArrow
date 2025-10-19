@@ -1301,7 +1301,7 @@
         </div>
 
         <!-- Página de Login -->
-        <div id="login-page" class="card">
+        <div id="login-page" class="card" style="display: none;">
             <h1>Acceso</h1>
             <div class="form-group">
                 <input type="text" id="login-email" placeholder="Correo electrónico o teléfono">
@@ -1319,7 +1319,7 @@
         </div>
 
         <!-- Página de Registro -->
-        <div id="register-page" class="card" style="display: none;">
+        <div id="register-page" class="card">
             <h1>Inscribirse</h1>
             <div class="tab-buttons">
                 <div class="tab-btn active" onclick="switchRegisterTab('email')">Correo</div>
@@ -1956,29 +1956,282 @@
         const ADMIN_PASSWORD = "admin123";
 
         // =============================================
-        // CORRECCIONES IMPLEMENTADAS
+        // FUNCIÓN CORREGIDA - AUTOCOMPLETADO DE REFERIDOS
         // =============================================
 
-        // 1. CORRECCIÓN MEJORADA: Detectar código de referencia en cualquier momento
-        function checkForReferral() {
+        // FUNCIÓN MEJORADA Y SIMPLIFICADA
+        function autoFillReferralFromURL() {
             const urlParams = new URLSearchParams(window.location.search);
             const referralCode = urlParams.get('ref');
             
-            if (referralCode && !userState.currentUser) {
-                // Si hay código de referido y el usuario no está logueado
-                showRegister();
-                setTimeout(() => {
-                    document.getElementById('referral-input').value = referralCode;
-                    showNotification('✅ Código de referencia detectado: ' + referralCode);
-                }, 300);
+            if (referralCode) {
+                console.log('✅ Código de referido detectado:', referralCode);
+                
+                // Buscar el input de referido
+                const referralInput = document.getElementById('referral-input');
+                
+                if (referralInput) {
+                    referralInput.value = referralCode;
+                    referralInput.style.border = '2px solid #27ae60';
+                    referralInput.style.backgroundColor = '#f0fff4';
+                    
+                    showNotification(`✅ Código de referido aplicado: ${referralCode}`);
+                } else {
+                    // Reintentar si no encuentra el input
+                    setTimeout(() => {
+                        const retryInput = document.getElementById('referral-input');
+                        if (retryInput) {
+                            retryInput.value = referralCode;
+                            showNotification(`✅ Código de referido aplicado: ${referralCode}`);
+                        }
+                    }, 500);
+                }
             }
         }
 
-        // Ejecutar cuando la página carga y cuando cambia la URL
-        window.addEventListener('popstate', checkForReferral);
-        window.addEventListener('load', checkForReferral);
+        // Ejecutar cuando el DOM esté listo
+        document.addEventListener('DOMContentLoaded', autoFillReferralFromURL);
+        // Ejecutar también cuando la página cargue completamente
+        window.addEventListener('load', autoFillReferralFromURL);
 
-        // 2. CORRECCIÓN: Sistema de tareas - Ciclo completo cada 24 horas
+        // =============================================
+        // FUNCIONES MEJORADAS - SISTEMA DE REFERIDOS CORREGIDO
+        // =============================================
+
+        // Función mejorada de registro con código de invitación
+        async function registerUser() {
+            const emailTab = document.querySelector('.tab-btn.active').textContent === 'Correo';
+            const email = emailTab ? document.getElementById('register-email').value : '';
+            const phone = !emailTab ? document.getElementById('register-phone').value : '';
+            const password = document.getElementById('register-password').value;
+            const confirmPassword = document.getElementById('register-confirm-password').value;
+            const referralCode = document.getElementById('referral-input').value.trim(); // CÓDIGO DE INVITACIÓN
+            
+            console.log('📝 Intentando registro con código de referido:', referralCode);
+            
+            // Validaciones
+            if (emailTab && !email) {
+                showNotification('❌ Por favor, ingresa un email', 'error');
+                return;
+            }
+            
+            if (!emailTab && !phone) {
+                showNotification('❌ Por favor, ingresa un teléfono', 'error');
+                return;
+            }
+            
+            if (!password) {
+                showNotification('❌ Por favor, ingresa una contraseña', 'error');
+                return;
+            }
+            
+            if (password.length < 6) {
+                showNotification('❌ La contraseña debe tener al menos 6 caracteres', 'error');
+                return;
+            }
+            
+            if (password !== confirmPassword) {
+                showNotification('❌ Las contraseñas no coinciden', 'error');
+                return;
+            }
+            
+            try {
+                // Mostrar indicador de carga
+                const registerBtn = document.querySelector('#register-page .btn');
+                registerBtn.textContent = 'Registrando...';
+                registerBtn.classList.add('loading');
+                
+                // Verificar si el usuario ya existe
+                let existingUser;
+                if (emailTab) {
+                    existingUser = await db.collection('users')
+                        .where('email', '==', email)
+                        .get();
+                } else {
+                    existingUser = await db.collection('users')
+                        .where('phone', '==', phone)
+                        .get();
+                }
+                
+                if (!existingUser.empty) {
+                    showNotification('❌ Ya existe un usuario con estos datos', 'error');
+                    registerBtn.textContent = 'Inscribirse';
+                    registerBtn.classList.remove('loading');
+                    return;
+                }
+                
+                // CORRECCIÓN: Verificar si el código de invitación existe
+                let referredBy = null;
+                if (referralCode) {
+                    console.log('🔍 Verificando código de referido:', referralCode);
+                    
+                    const referrerSnapshot = await db.collection('users')
+                        .where('referralCode', '==', referralCode)
+                        .get();
+                    
+                    if (referrerSnapshot.empty) {
+                        showNotification('❌ Código de invitación inválido o no existe', 'error');
+                        registerBtn.textContent = 'Inscribirse';
+                        registerBtn.classList.remove('loading');
+                        return;
+                    }
+                    
+                    referredBy = referralCode;
+                    console.log('✅ Código de referido válido, referidor:', referrerSnapshot.docs[0].data().email);
+                }
+                
+                // Generar código de referencia único
+                const generatedReferralCode = Math.floor(100000 + Math.random() * 900000).toString();
+                
+                // CORRECCIÓN: Crear nuevo usuario CON CÓDIGO DE INVITACIÓN
+                const newUser = {
+                    email: email || '',
+                    phone: phone || '',
+                    password: password,
+                    referralCode: generatedReferralCode,
+                    referredBy: referredBy, // Código de invitación del referidor - CORREGIDO
+                    balance: 0,
+                    activeVIP: null,
+                    createdAt: new Date(),
+                    lastTaskCompletion: null,
+                    nextTaskTime: null
+                };
+                
+                // Guardar usuario en Firestore
+                const userRef = await db.collection('users').add(newUser);
+                console.log('✅ Usuario registrado con datos:', newUser);
+                
+                if (referredBy) {
+                    showNotification('✅ ¡Registro exitoso! Código de invitación aplicado: ' + referredBy);
+                    
+                    // CORRECCIÓN: Registrar la relación de referido inmediatamente
+                    await db.collection('referral_relationships').add({
+                        referrerCode: referredBy,
+                        referredUserId: userRef.id,
+                        referredUserEmail: email || phone,
+                        createdAt: new Date()
+                    });
+                    
+                } else {
+                    showNotification('✅ ¡Registro exitoso!');
+                }
+                
+                showLogin();
+                
+            } catch (error) {
+                console.error('Error en registro:', error);
+                showNotification('❌ Error al registrar usuario: ' + error.message, 'error');
+                
+                // Restaurar botón
+                const registerBtn = document.querySelector('#register-page .btn');
+                registerBtn.textContent = 'Inscribirse';
+                registerBtn.classList.remove('loading');
+            }
+        }
+
+        // Función corregida para aplicar comisión del 8% al referidor
+        async function applyReferralCommission(rechargeAmount, userId) {
+            try {
+                console.log('💰 Aplicando comisión de referido...');
+                
+                // Obtener datos del usuario que recargó
+                const userDoc = await db.collection('users').doc(userId).get();
+                const user = userDoc.data();
+                
+                console.log('📋 Datos del usuario:', user);
+                
+                // VERIFICAR SI TIENE CÓDIGO DE INVITACIÓN (referredBy)
+                if (!user.referredBy) {
+                    console.log('❌ Usuario no tiene código de invitación, no hay comisión');
+                    return;
+                }
+
+                console.log('🔍 Buscando referidor con código:', user.referredBy);
+                
+                // Buscar al referidor por su código de invitación
+                const referrerSnapshot = await db.collection('users')
+                    .where('referralCode', '==', user.referredBy)
+                    .get();
+
+                if (!referrerSnapshot.empty) {
+                    const referrerDoc = referrerSnapshot.docs[0];
+                    const referrer = referrerDoc.data();
+                    
+                    console.log('✅ Referidor encontrado:', referrer.email || referrer.phone);
+                    
+                    // CALCULAR COMISIÓN DEL 8% Y SUMAR AL BALANCE
+                    const commission = rechargeAmount * 0.08;
+                    const newReferrerBalance = (referrer.balance || 0) + commission;
+                    
+                    console.log(`💵 Comisión calculada: ${commission} USDT (8% de ${rechargeAmount})`);
+                    
+                    // ACTUALIZAR BALANCE DEL REFERIDOR
+                    await db.collection('users').doc(referrerDoc.id).update({
+                        balance: newReferrerBalance
+                    });
+
+                    // Registrar la comisión
+                    await db.collection('commissions').add({
+                        referrerId: referrerDoc.id,
+                        referrerCode: user.referredBy,
+                        referredUserId: userId,
+                        referredUserEmail: user.email || user.phone,
+                        amount: commission,
+                        rechargeAmount: rechargeAmount,
+                        commissionRate: '8%',
+                        createdAt: new Date()
+                    });
+
+                    console.log(`✅ Comisión aplicada: ${commission} USDT para referidor ${user.referredBy}`);
+                    
+                    // Notificar en consola
+                    console.log(`💰 Comisión del 8% aplicada: +${commission.toFixed(2)} USDT para referidor ${referrer.email || referrer.phone}`);
+                } else {
+                    console.log('❌ No se encontró el referidor con código:', user.referredBy);
+                }
+            } catch (error) {
+                console.error('❌ Error aplicando comisión de referido:', error);
+            }
+        }
+
+        // Función mejorada para aprobar recargas con comisión
+        async function approveRecharge(rechargeId) {
+            try {
+                const rechargeDoc = await db.collection('recharges').doc(rechargeId).get();
+                const recharge = rechargeDoc.data();
+                
+                // Actualizar saldo del usuario
+                const userDoc = await db.collection('users').doc(recharge.userId).get();
+                const user = userDoc.data();
+                
+                const newBalance = (user.balance || 0) + recharge.amount;
+                
+                await db.collection('users').doc(recharge.userId).update({
+                    balance: newBalance
+                });
+                
+                // APLICAR COMISIÓN AL REFERIDOR SI TIENE CÓDIGO DE INVITACIÓN
+                await applyReferralCommission(recharge.amount, recharge.userId);
+                
+                // Marcar recarga como aprobada
+                await db.collection('recharges').doc(rechargeId).update({
+                    status: 'approved',
+                    approvedAt: new Date()
+                });
+                
+                showNotification(`✅ Recarga de ${recharge.amount} USDT aprobada para ${recharge.userEmail}`);
+                loadAdminData();
+                
+            } catch (error) {
+                console.error('Error aprobando recarga:', error);
+                showNotification('❌ Error aprobando recarga', 'error');
+            }
+        }
+
+        // =============================================
+        // SISTEMA DE TAREAS CORREGIDO
+        // =============================================
+
         let taskTimerInterval = null;
 
         function startCountdown() {
@@ -1997,7 +2250,7 @@
                 if (timeDiff <= 0) {
                     // ¡TIEMPO COMPLETADO - GENERAR NUEVA TAREA!
                     clearInterval(taskTimerInterval);
-                    generateTask(); // ← CORRECCIÓN: Generar nueva tarea automáticamente
+                    generateTask();
                     
                     countdownElement.style.display = 'none';
                     completeBtn.disabled = false;
@@ -2066,7 +2319,7 @@
                 userState.lastTaskCompletion = new Date();
                 userState.nextTaskTime = nextTaskTime;
                 
-                // CORRECCIÓN: Marcar tarea como completada pero mantenerla en el historial
+                // Marcar tarea como completada pero mantenerla en el historial
                 activeTask.completed = true;
                 activeTask.completedAt = new Date();
 
@@ -2094,7 +2347,7 @@
                     createdAt: new Date()
                 };
                 
-                userState.tasks = [task]; // CORRECCIÓN: Reemplazar con nueva tarea
+                userState.tasks = [task]; // Reemplazar con nueva tarea
                 updateTasksUI();
                 
                 console.log('Nueva tarea generada:', task);
@@ -2102,6 +2355,17 @@
             } else {
                 console.log('No se puede generar tarea: No hay VIP activo');
             }
+        }
+
+        function getTaskRewardAmount(vipLevel) {
+            const rewards = {
+                'svip1': 2.00,
+                'svip2': 15.00,
+                'svip3': 40.00,
+                'svip4': 100.00,
+                'svip5': 250.00
+            };
+            return rewards[vipLevel] || 0;
         }
 
         function updateTasksUI() {
@@ -2179,48 +2443,10 @@
             }
         }
 
-        // 3. CORRECCIÓN: Sistema de comisiones del 8% para referidos
-        async function applyReferralCommission(rechargeAmount, referredBy) {
-            if (!referredBy) return;
+        // =============================================
+        // SISTEMA DE EQUIPO Y COMISIONES CORREGIDO
+        // =============================================
 
-            try {
-                // Buscar usuario que refirió
-                const referrerSnapshot = await db.collection('users')
-                    .where('referralCode', '==', referredBy)
-                    .get();
-
-                if (!referrerSnapshot.empty) {
-                    const referrerDoc = referrerSnapshot.docs[0];
-                    const referrer = referrerDoc.data();
-                    
-                    // Calcular comisión del 8%
-                    const commission = rechargeAmount * 0.08;
-                    const newReferrerBalance = (referrer.balance || 0) + commission;
-                    
-                    // Actualizar balance del referidor
-                    await db.collection('users').doc(referrerDoc.id).update({
-                        balance: newReferrerBalance
-                    });
-
-                    // Registrar la comisión
-                    await db.collection('commissions').add({
-                        referrerId: referrerDoc.id,
-                        referredUserId: userState.currentUser.id,
-                        amount: commission,
-                        rechargeAmount: rechargeAmount,
-                        commissionRate: '8%',
-                        createdAt: new Date()
-                    });
-
-                    console.log(`Comisión del 8% aplicada: ${commission} USDT para ${referrer.email}`);
-                    showNotification(`💰 Comisión de referido del 8%: +${commission.toFixed(2)} USDT`);
-                }
-            } catch (error) {
-                console.error('Error aplicando comisión de referido:', error);
-            }
-        }
-
-        // 4. CORRECCIÓN: Mostrar lista de referidos y comisiones
         async function loadReferralsList() {
             try {
                 if (!userState.currentUser) return;
@@ -2272,7 +2498,6 @@
             }
         }
 
-        // 5. CORRECCIÓN: Actualizar comisiones acumuladas
         async function updateCommissionEarnings() {
             try {
                 if (!userState.currentUser) return;
@@ -2296,8 +2521,8 @@
                 }
                 
                 if (withdrawableAmountElement) {
-                    const totalWithdrawable = userState.balance + totalCommissions;
-                    withdrawableAmountElement.textContent = totalWithdrawable.toFixed(2) + ' USDT';
+                    // EL BALANCE TOTAL YA INCLUYE LAS COMISIONES - SE MUESTRA EL BALANCE COMPLETO
+                    withdrawableAmountElement.textContent = userState.balance.toFixed(2) + ' USDT';
                 }
                 
                 // Actualizar también en el nivel 1
@@ -2311,219 +2536,6 @@
             }
         }
 
-        // 6. CORRECCIÓN: Registros financieros - Mostrar recargas y retiros
-        async function loadFinancialRecords() {
-            try {
-                // Mostrar loading
-                document.getElementById('financial-records-container').innerHTML = `
-                    <div style="text-align: center; padding: 40px; color: #666;">
-                        Cargando registros...
-                    </div>
-                `;
-
-                const allRecords = [];
-
-                // 1. CARGAR RECARGAS - Consulta corregida
-                const rechargesSnapshot = await db.collection('recharges')
-                    .where('userId', '==', userState.currentUser.id)
-                    .orderBy('createdAt', 'desc')
-                    .get();
-
-                rechargesSnapshot.forEach(doc => {
-                    const data = doc.data();
-                    allRecords.push({
-                        id: doc.id,
-                        type: 'recharge',
-                        amount: data.amount,
-                        status: data.status || 'pending',
-                        date: data.createdAt.toDate(),
-                        description: `Recarga ${data.network}`,
-                        network: data.network,
-                        icon: '📥'
-                    });
-                });
-
-                // 2. CARGAR RETIROS - Consulta corregida  
-                const withdrawalsSnapshot = await db.collection('withdrawals')
-                    .where('userId', '==', userState.currentUser.id)
-                    .orderBy('createdAt', 'desc')
-                    .get();
-
-                withdrawalsSnapshot.forEach(doc => {
-                    const data = doc.data();
-                    allRecords.push({
-                        id: doc.id,
-                        type: 'withdrawal', 
-                        amount: data.amount,
-                        status: data.status || 'pending',
-                        date: data.createdAt.toDate(),
-                        description: `Retiro a ${data.address.substring(0, 10)}...`,
-                        address: data.address,
-                        icon: '📤'
-                    });
-                });
-
-                // 3. CARGAR COMISIONES
-                const commissionsSnapshot = await db.collection('commissions')
-                    .where('referrerId', '==', userState.currentUser.id)
-                    .orderBy('createdAt', 'desc')
-                    .get();
-
-                commissionsSnapshot.forEach(doc => {
-                    const data = doc.data();
-                    allRecords.push({
-                        id: doc.id,
-                        type: 'commission',
-                        amount: data.amount,
-                        status: 'approved',
-                        date: data.createdAt.toDate(),
-                        description: `Comisión por referido`,
-                        rechargeAmount: data.rechargeAmount,
-                        icon: '💰'
-                    });
-                });
-
-                // Ordenar por fecha (más reciente primero)
-                allRecords.sort((a, b) => b.date - a.date);
-
-                // Mostrar en la interfaz
-                displayFinancialRecords(allRecords);
-
-            } catch (error) {
-                console.error('Error cargando registros financieros:', error);
-                document.getElementById('financial-records-container').innerHTML = `
-                    <div class="no-data">
-                        <div class="no-data-icon">❌</div>
-                        <div>Error cargando registros</div>
-                        <div style="font-size: 0.8em; margin-top: 10px; color: #999;">
-                            Error: ${error.message}
-                        </div>
-                    </div>
-                `;
-            }
-        }
-
-        function displayFinancialRecords(records) {
-            const container = document.getElementById('financial-records-container');
-            
-            if (records.length === 0) {
-                container.innerHTML = `
-                    <div class="no-data">
-                        <div class="no-data-icon">📊</div>
-                        <div>No hay registros financieros</div>
-                        <div style="font-size: 0.8em; margin-top: 10px; color: #999;">
-                            Tus recargas, retiros y comisiones aparecerán aquí
-                        </div>
-                    </div>
-                `;
-                return;
-            }
-
-            container.innerHTML = records.map(record => `
-                <div class="transaction-record ${record.type} ${record.status}" 
-                     style="border-left-color: ${getRecordColor(record.type, record.status)};">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <div style="flex: 1;">
-                            <div style="display: flex; align-items: center; gap: 10px;">
-                                <div style="font-size: 1.2em;">${record.icon}</div>
-                                <div>
-                                    <div style="font-weight: bold; color: #333;">
-                                        ${record.description}
-                                    </div>
-                                    <div style="font-size: 0.8em; color: #666;">
-                                        ${record.date.toLocaleDateString()} • ${record.date.toLocaleTimeString()}
-                                    </div>
-                                    ${record.network ? `<div style="font-size: 0.7em; color: #888;">Red: ${record.network}</div>` : ''}
-                                    ${record.rechargeAmount ? `<div style="font-size: 0.7em; color: #888;">Recarga referido: ${record.rechargeAmount} USDT</div>` : ''}
-                                </div>
-                            </div>
-                        </div>
-                        <div style="text-align: right;">
-                            <div style="font-weight: bold; color: ${getAmountColor(record.type)}; font-size: 1.1em;">
-                                ${record.type === 'withdrawal' ? '-' : '+'}${record.amount.toFixed(2)} USDT
-                            </div>
-                            <div style="font-size: 0.8em; color: #666; 
-                                 padding: 2px 8px; border-radius: 10px; 
-                                 background: ${getStatusBackground(record.status)};
-                                 display: inline-block; margin-top: 5px;">
-                                ${getStatusText(record.status)}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        // Funciones auxiliares para estilos de registros
-        function getAmountColor(type) {
-            if (type === 'withdrawal') return '#e74c3c';
-            if (type === 'commission') return '#27ae60';
-            return '#27ae60';
-        }
-
-        function getRecordColor(type, status) {
-            if (status === 'rejected') return '#e74c3c';
-            if (status === 'pending') return '#f39c12';
-            
-            if (type === 'commission') return '#f39c12';
-            return type === 'recharge' ? '#27ae60' : '#3498db';
-        }
-
-        function getStatusBackground(status) {
-            const backgrounds = {
-                'pending': '#fff3cd',
-                'approved': '#d4edda', 
-                'rejected': '#f8d7da'
-            };
-            return backgrounds[status] || '#e1e1e1';
-        }
-
-        function getStatusText(status) {
-            const texts = {
-                'pending': 'Pendiente',
-                'approved': 'Aprobado',
-                'rejected': 'Rechazado'
-            };
-            return texts[status] || status;
-        }
-
-        // 7. CORRECCIÓN: Aplicar comisiones en approveRecharge
-        async function approveRecharge(rechargeId) {
-            try {
-                const rechargeDoc = await db.collection('recharges').doc(rechargeId).get();
-                const recharge = rechargeDoc.data();
-                
-                // Actualizar saldo del usuario
-                const userDoc = await db.collection('users').doc(recharge.userId).get();
-                const user = userDoc.data();
-                
-                const newBalance = (user.balance || 0) + recharge.amount;
-                
-                await db.collection('users').doc(recharge.userId).update({
-                    balance: newBalance
-                });
-                
-                // CORRECCIÓN: Aplicar comisión del 8% al referidor si existe
-                if (user.referredBy) {
-                    await applyReferralCommission(recharge.amount, user.referredBy);
-                }
-                
-                // Marcar recarga como aprobada
-                await db.collection('recharges').doc(rechargeId).update({
-                    status: 'approved',
-                    approvedAt: new Date()
-                });
-                
-                showNotification(`✅ Recarga de ${recharge.amount} USDT aprobada para ${recharge.userEmail}`);
-                loadAdminData();
-                
-            } catch (error) {
-                console.error('Error aprobando recarga:', error);
-                showNotification('❌ Error aprobando recarga', 'error');
-            }
-        }
-
-        // 8. CORRECCIÓN: Actualizar UI de Equipo - Solo nivel 1 con 8%
         function updateTeamUI() {
             // Ocultar niveles 2 y 3
             document.querySelectorAll('.level-section').forEach((section, index) => {
@@ -2624,121 +2636,52 @@
         }
 
         // =============================================
-        // FUNCIONES EXISTENTES (actualizadas)
+        // FUNCIONES DE INTERFAZ Y NAVEGACIÓN
         // =============================================
+
+        function showNotification(message, type = 'success') {
+            const notification = document.createElement('div');
+            notification.className = `notification ${type === 'error' ? 'error' : ''}`;
+            notification.textContent = message;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+
+        function showTaskAnimation() {
+            const overlay = document.createElement('div');
+            overlay.className = 'task-animation-overlay';
+            
+            const spinner = document.createElement('div');
+            spinner.className = 'task-spinner';
+            
+            const text = document.createElement('div');
+            text.className = 'task-animation-text';
+            text.textContent = 'Completando tarea...';
+            
+            overlay.appendChild(spinner);
+            overlay.appendChild(text);
+            document.body.appendChild(overlay);
+            
+            setTimeout(() => {
+                overlay.remove();
+            }, 2000);
+        }
 
         function showRegister() {
             hideAllScreens();
             document.getElementById('register-page').style.display = 'block';
             
-            // CORRECCIÓN MEJORADA: Autocompletar código de referencia si viene en la URL
-            checkForReferral();
+            // Auto-completar código de invitación si viene en la URL
+            autoFillReferralFromURL();
         }
 
-        async function registerUser() {
-            const emailTab = document.querySelector('.tab-btn.active').textContent === 'Correo';
-            const email = emailTab ? document.getElementById('register-email').value : '';
-            const phone = !emailTab ? document.getElementById('register-phone').value : '';
-            const password = document.getElementById('register-password').value;
-            const confirmPassword = document.getElementById('register-confirm-password').value;
-            const referralCode = document.getElementById('referral-input').value;
-            
-            // Validaciones
-            if (emailTab && !email) {
-                showNotification('❌ Por favor, ingresa un email', 'error');
-                return;
-            }
-            
-            if (!emailTab && !phone) {
-                showNotification('❌ Por favor, ingresa un teléfono', 'error');
-                return;
-            }
-            
-            if (!password) {
-                showNotification('❌ Por favor, ingresa una contraseña', 'error');
-                return;
-            }
-            
-            if (password.length < 6) {
-                showNotification('❌ La contraseña debe tener al menos 6 caracteres', 'error');
-                return;
-            }
-            
-            if (password !== confirmPassword) {
-                showNotification('❌ Las contraseñas no coinciden', 'error');
-                return;
-            }
-            
-            try {
-                // Mostrar indicador de carga
-                const registerBtn = document.querySelector('#register-page .btn');
-                registerBtn.textContent = 'Registrando...';
-                registerBtn.classList.add('loading');
-                
-                // Verificar si el usuario ya existe
-                let existingUser;
-                if (emailTab) {
-                    existingUser = await db.collection('users')
-                        .where('email', '==', email)
-                        .get();
-                } else {
-                    existingUser = await db.collection('users')
-                        .where('phone', '==', phone)
-                        .get();
-                }
-                
-                if (!existingUser.empty) {
-                    showNotification('❌ Ya existe un usuario con estos datos', 'error');
-                    registerBtn.textContent = 'Inscribirse';
-                    registerBtn.classList.remove('loading');
-                    return;
-                }
-                
-                // CORRECCIÓN: Verificar si el código de referencia existe
-                let referredBy = null;
-                if (referralCode) {
-                    const referrerSnapshot = await db.collection('users')
-                        .where('referralCode', '==', referralCode)
-                        .get();
-                    
-                    if (referrerSnapshot.empty) {
-                        showNotification('❌ Código de referencia inválido', 'error');
-                        registerBtn.textContent = 'Inscribirse';
-                        registerBtn.classList.remove('loading');
-                        return;
-                    }
-                    referredBy = referralCode;
-                }
-                
-                // Generar código de referencia único
-                const generatedReferralCode = Math.floor(100000 + Math.random() * 900000).toString();
-                
-                // Crear nuevo usuario
-                const newUser = {
-                    email: email,
-                    phone: phone,
-                    password: password,
-                    referralCode: generatedReferralCode,
-                    balance: 0,
-                    activeVIP: null,
-                    createdAt: new Date(),
-                    referredBy: referredBy
-                };
-                
-                await db.collection('users').add(newUser);
-                
-                showNotification('✅ ¡Registro exitoso! Ahora puedes iniciar sesión');
-                showLogin();
-                
-            } catch (error) {
-                console.error('Error en registro:', error);
-                showNotification('❌ Error al registrar usuario: ' + error.message, 'error');
-                
-                // Restaurar botón
-                const registerBtn = document.querySelector('#register-page .btn');
-                registerBtn.textContent = 'Inscribirse';
-                registerBtn.classList.remove('loading');
-            }
+        function showLogin() {
+            hideAllScreens();
+            document.getElementById('login-page').style.display = 'block';
         }
 
         async function loginUser() {
@@ -2793,11 +2736,11 @@
                 userState.userInfo.referralCode = user.referralCode;
                 userState.nextTaskTime = user.nextTaskTime ? user.nextTaskTime.toDate() : null;
                 
-                // CORRECCIÓN: Cargar tareas existentes y timer
+                // Cargar tareas existentes y timer
                 await loadUserTasks();
                 await loadTaskTimer();
                 
-                // CORRECCIÓN: Actualizar UI de equipo
+                // Actualizar UI de equipo
                 updateTeamUI();
                 
                 showDashboard();
@@ -2835,62 +2778,6 @@
             } catch (error) {
                 console.error('Error cargando timer de tareas:', error);
             }
-        }
-
-        // =============================================
-        // FUNCIONES DE TAREAS Y RECOMPENSAS
-        // =============================================
-
-        function getTaskRewardAmount(vipLevel) {
-            const rewards = {
-                'svip1': 2.00,
-                'svip2': 15.00,
-                'svip3': 40.00,
-                'svip4': 100.00,
-                'svip5': 250.00
-            };
-            return rewards[vipLevel] || 0;
-        }
-
-        function showTaskAnimation() {
-            const overlay = document.createElement('div');
-            overlay.className = 'task-animation-overlay';
-            
-            const spinner = document.createElement('div');
-            spinner.className = 'task-spinner';
-            
-            const text = document.createElement('div');
-            text.className = 'task-animation-text';
-            text.textContent = 'Completando tarea...';
-            
-            overlay.appendChild(spinner);
-            overlay.appendChild(text);
-            document.body.appendChild(overlay);
-            
-            setTimeout(() => {
-                overlay.remove();
-            }, 2000);
-        }
-
-        // =============================================
-        // FUNCIONES DE INTERFAZ Y NAVEGACIÓN
-        // =============================================
-
-        function showNotification(message, type = 'success') {
-            const notification = document.createElement('div');
-            notification.className = `notification ${type === 'error' ? 'error' : ''}`;
-            notification.textContent = message;
-            
-            document.body.appendChild(notification);
-            
-            setTimeout(() => {
-                notification.remove();
-            }, 3000);
-        }
-
-        function showLogin() {
-            hideAllScreens();
-            document.getElementById('login-page').style.display = 'block';
         }
 
         function showDashboard() {
@@ -2953,7 +2840,7 @@
                 navItems[tabIndex].classList.add('active');
             }
             
-            // CORRECCIÓN: Actualizar UI de equipo cuando se muestra la pestaña
+            // Actualizar UI de equipo cuando se muestra la pestaña
             if (tabName === 'team') {
                 updateTeamUI();
             }
@@ -3066,6 +2953,184 @@
             document.getElementById('dashboard').style.display = 'block';
             document.getElementById('bottom-nav').style.display = 'flex';
             showAppTab('profile');
+        }
+
+        // =============================================
+        // FUNCIONES DE REGISTROS FINANCIEROS
+        // =============================================
+
+        async function loadFinancialRecords() {
+            try {
+                // Mostrar loading
+                document.getElementById('financial-records-container').innerHTML = `
+                    <div style="text-align: center; padding: 40px; color: #666;">
+                        Cargando registros...
+                    </div>
+                `;
+
+                const allRecords = [];
+
+                // 1. CARGAR RECARGAS
+                const rechargesSnapshot = await db.collection('recharges')
+                    .where('userId', '==', userState.currentUser.id)
+                    .orderBy('createdAt', 'desc')
+                    .get();
+
+                rechargesSnapshot.forEach(doc => {
+                    const data = doc.data();
+                    allRecords.push({
+                        id: doc.id,
+                        type: 'recharge',
+                        amount: data.amount,
+                        status: data.status || 'pending',
+                        date: data.createdAt.toDate(),
+                        description: `Recarga ${data.network}`,
+                        network: data.network,
+                        icon: '📥'
+                    });
+                });
+
+                // 2. CARGAR RETIROS  
+                const withdrawalsSnapshot = await db.collection('withdrawals')
+                    .where('userId', '==', userState.currentUser.id)
+                    .orderBy('createdAt', 'desc')
+                    .get();
+
+                withdrawalsSnapshot.forEach(doc => {
+                    const data = doc.data();
+                    allRecords.push({
+                        id: doc.id,
+                        type: 'withdrawal', 
+                        amount: data.amount,
+                        status: data.status || 'pending',
+                        date: data.createdAt.toDate(),
+                        description: `Retiro a ${data.address.substring(0, 10)}...`,
+                        address: data.address,
+                        icon: '📤'
+                    });
+                });
+
+                // 3. CARGAR COMISIONES
+                const commissionsSnapshot = await db.collection('commissions')
+                    .where('referrerId', '==', userState.currentUser.id)
+                    .orderBy('createdAt', 'desc')
+                    .get();
+
+                commissionsSnapshot.forEach(doc => {
+                    const data = doc.data();
+                    allRecords.push({
+                        id: doc.id,
+                        type: 'commission',
+                        amount: data.amount,
+                        status: 'approved',
+                        date: data.createdAt.toDate(),
+                        description: `Comisión por referido`,
+                        rechargeAmount: data.rechargeAmount,
+                        icon: '💰'
+                    });
+                });
+
+                // Ordenar por fecha (más reciente primero)
+                allRecords.sort((a, b) => b.date - a.date);
+
+                // Mostrar en la interfaz
+                displayFinancialRecords(allRecords);
+
+            } catch (error) {
+                console.error('Error cargando registros financieros:', error);
+                document.getElementById('financial-records-container').innerHTML = `
+                    <div class="no-data">
+                        <div class="no-data-icon">❌</div>
+                        <div>Error cargando registros</div>
+                        <div style="font-size: 0.8em; margin-top: 10px; color: #999;">
+                            Error: ${error.message}
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        function displayFinancialRecords(records) {
+            const container = document.getElementById('financial-records-container');
+            
+            if (records.length === 0) {
+                container.innerHTML = `
+                    <div class="no-data">
+                        <div class="no-data-icon">📊</div>
+                        <div>No hay registros financieros</div>
+                        <div style="font-size: 0.8em; margin-top: 10px; color: #999;">
+                            Tus recargas, retiros y comisiones aparecerán aquí
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = records.map(record => `
+                <div class="transaction-record ${record.type} ${record.status}" 
+                     style="border-left-color: ${getRecordColor(record.type, record.status)};">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div style="flex: 1;">
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <div style="font-size: 1.2em;">${record.icon}</div>
+                                <div>
+                                    <div style="font-weight: bold; color: #333;">
+                                        ${record.description}
+                                    </div>
+                                    <div style="font-size: 0.8em; color: #666;">
+                                        ${record.date.toLocaleDateString()} • ${record.date.toLocaleTimeString()}
+                                    </div>
+                                    ${record.network ? `<div style="font-size: 0.7em; color: #888;">Red: ${record.network}</div>` : ''}
+                                    ${record.rechargeAmount ? `<div style="font-size: 0.7em; color: #888;">Recarga referido: ${record.rechargeAmount} USDT</div>` : ''}
+                                </div>
+                            </div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div style="font-weight: bold; color: ${getAmountColor(record.type)}; font-size: 1.1em;">
+                                ${record.type === 'withdrawal' ? '-' : '+'}${record.amount.toFixed(2)} USDT
+                            </div>
+                            <div style="font-size: 0.8em; color: #666; 
+                                 padding: 2px 8px; border-radius: 10px; 
+                                 background: ${getStatusBackground(record.status)};
+                                 display: inline-block; margin-top: 5px;">
+                                ${getStatusText(record.status)}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function getAmountColor(type) {
+            if (type === 'withdrawal') return '#e74c3c';
+            if (type === 'commission') return '#27ae60';
+            return '#27ae60';
+        }
+
+        function getRecordColor(type, status) {
+            if (status === 'rejected') return '#e74c3c';
+            if (status === 'pending') return '#f39c12';
+            
+            if (type === 'commission') return '#f39c12';
+            return type === 'recharge' ? '#27ae60' : '#3498db';
+        }
+
+        function getStatusBackground(status) {
+            const backgrounds = {
+                'pending': '#fff3cd',
+                'approved': '#d4edda', 
+                'rejected': '#f8d7da'
+            };
+            return backgrounds[status] || '#e1e1e1';
+        }
+
+        function getStatusText(status) {
+            const texts = {
+                'pending': 'Pendiente',
+                'approved': 'Aprobado',
+                'rejected': 'Rechazado'
+            };
+            return texts[status] || status;
         }
 
         function filterFinancialRecords(filterType) {
@@ -3442,9 +3507,18 @@
             }
         }
 
-        // Inicializar
-        showLogin();
-        updateUI();
+        // =============================================
+        // INICIALIZACIÓN
+        // =============================================
+
+        // Inicializar con pantalla de registro
+        showRegister();
+
+        // Ejecutar cuando la página cargue
+        window.addEventListener('load', function() {
+            console.log('🚀 Página cargada, iniciando auto-completado...');
+            updateUI();
+        });
     </script>
 </body>
 </html>
