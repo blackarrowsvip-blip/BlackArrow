@@ -43,6 +43,69 @@
             color: #4fc3f7;
         }
 
+        /* BOTÓN FLOTANTE DE SOPORTE */
+        .floating-support {
+            position: fixed;
+            bottom: 90px;
+            right: 20px;
+            background: linear-gradient(135deg, #0088cc, #00aced);
+            color: white;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 8px 25px rgba(0, 136, 204, 0.4);
+            cursor: pointer;
+            z-index: 1000;
+            transition: all 0.3s ease;
+            animation: pulse 2s infinite;
+            border: 3px solid white;
+        }
+
+        .floating-support:hover {
+            transform: scale(1.1);
+            box-shadow: 0 12px 30px rgba(0, 136, 204, 0.6);
+        }
+
+        .floating-support .telegram-icon {
+            font-size: 1.8em;
+            font-weight: bold;
+        }
+
+        .support-tooltip {
+            position: absolute;
+            right: 70px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 0.8em;
+            white-space: nowrap;
+            opacity: 0;
+            transform: translateX(10px);
+            transition: all 0.3s ease;
+            pointer-events: none;
+        }
+
+        .floating-support:hover .support-tooltip {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(0, 136, 204, 0.7);
+            }
+            70% {
+                box-shadow: 0 0 0 10px rgba(0, 136, 204, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(0, 136, 204, 0);
+            }
+        }
+
         .card {
             background: white;
             border-radius: 20px;
@@ -1233,6 +1296,12 @@
 <body>
     <div class="logo">BLUE <span>ARROW</span></div>
     
+    <!-- Botón Flotante de Soporte -->
+    <div class="floating-support" onclick="openTelegramSupport()">
+        <div class="telegram-icon">📱</div>
+        <div class="support-tooltip">Soporte en Telegram</div>
+    </div>
+    
     <div class="container">
         <!-- Panel de Administración -->
         <div id="admin-panel" class="admin-panel" style="display: none;">
@@ -1969,6 +2038,20 @@
         const db = firebase.firestore();
         const auth = firebase.auth();
 
+        // =============================================
+        // FUNCIÓN PARA EL BOTÓN DE SOPORTE TELEGRAM
+        // =============================================
+
+        function openTelegramSupport() {
+            const telegramUrl = "https://t.me/+O30K-MebOH1iNTEx";
+            
+            // Abrir en una nueva pestaña
+            window.open(telegramUrl, '_blank');
+            
+            // Mostrar notificación
+            showNotification('📱 Abriendo grupo de soporte en Telegram...');
+        }
+
         // Estado de la aplicación
         const userState = {
             currentUser: null,
@@ -1999,7 +2082,6 @@
         // FUNCIÓN CORREGIDA - AUTOCOMPLETADO DE REFERIDOS
         // =============================================
 
-        // FUNCIÓN MEJORADA Y SIMPLIFICADA
         function autoFillReferralFromURL() {
             const urlParams = new URLSearchParams(window.location.search);
             const referralCode = urlParams.get('ref');
