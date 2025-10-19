@@ -58,7 +58,7 @@
             font-size: 1.4em;
         }
 
-        /* Estilos para el panel de administración */
+        /* Panel de Administración */
         .admin-panel {
             background: white;
             border-radius: 20px;
@@ -468,7 +468,7 @@
 
         .network-list {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: 1fr;
             gap: 10px;
             margin-bottom: 20px;
         }
@@ -481,11 +481,26 @@
             text-align: center;
             cursor: pointer;
             transition: all 0.3s;
+            position: relative;
         }
 
         .network-item.selected {
             border-color: #1e3c72;
             background: #e3f2fd;
+        }
+
+        .network-fee {
+            font-size: 0.8em;
+            color: #e74c3c;
+            margin-top: 5px;
+            font-weight: bold;
+        }
+
+        .network-no-fee {
+            font-size: 0.8em;
+            color: #27ae60;
+            margin-top: 5px;
+            font-weight: bold;
         }
 
         .address-box {
@@ -1193,6 +1208,26 @@
             color: #27ae60;
             font-size: 1.1em;
         }
+
+        /* Estilos para comisiones de retiro */
+        .withdrawal-fee-info {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 15px 0;
+            text-align: center;
+        }
+
+        .fee-warning {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+
+        .fee-free {
+            color: #27ae60;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
@@ -1777,15 +1812,18 @@
             </div>
 
             <div class="network-list">
-                <div class="network-item" onclick="selectNetwork(this, 'POLYGON-USDC')">POLYGON-USDC</div>
-                <div class="network-item" onclick="selectNetwork(this, 'POLYGON-USDT')">POLYGON-USDT</div>
-                <div class="network-item" onclick="selectNetwork(this, 'BEP20-USDT')">BEP20-USDT</div>
-                <div class="network-item" onclick="selectNetwork(this, 'BEP20-USDC')">BEP20-USDC</div>
-                <div class="network-item" onclick="selectNetwork(this, 'ETH-USDT')">ETH-USDT</div>
-                <div class="network-item" onclick="selectNetwork(this, 'ETH-USDC')">ETH-USDC</div>
-                <div class="network-item" onclick="selectNetwork(this, 'TRC20-USDT')">TRC20-USDT</div>
-                <div class="network-item" onclick="selectNetwork(this, 'BNB')">BNB</div>
-                <div class="network-item" onclick="selectNetwork(this, 'ETH')">ETH</div>
+                <div class="network-item" onclick="selectNetwork(this, 'USDT BEP20')">
+                    USDT BEP20
+                    <div class="network-no-fee">Sin comisión</div>
+                </div>
+                <div class="network-item" onclick="selectNetwork(this, 'USDT TRC20')">
+                    USDT TRC20
+                    <div class="network-no-fee">Sin comisión</div>
+                </div>
+                <div class="network-item" onclick="selectNetwork(this, 'LTC')">
+                    LTC (Red LTC)
+                    <div class="network-no-fee">Sin comisión</div>
+                </div>
             </div>
 
             <div class="address-box" id="address-container" style="display: none;">
@@ -1828,16 +1866,23 @@
                 </div>
             </div>
 
+            <div class="withdrawal-fee-info">
+                <strong>Información de Comisiones:</strong><br>
+                <div class="fee-free">• USDT BEP20: SIN COMISIÓN</div>
+                <div class="fee-warning">• USDT TRC20: COMISIÓN DE 2 USDT (Fee de red TRON)</div>
+            </div>
+
             <div class="withdrawal-info">
                 <strong>Método de retiro:</strong>
                 <div class="network-list">
-                    <div class="network-item" onclick="selectWithdrawNetwork(this)">POLYGON-USDC</div>
-                    <div class="network-item" onclick="selectWithdrawNetwork(this)">POLYGON-USDT</div>
-                    <div class="network-item" onclick="selectWithdrawNetwork(this)">BEP20-USDT</div>
-                    <div class="network-item" onclick="selectWithdrawNetwork(this)">BEP20-USDC</div>
-                    <div class="network-item" onclick="selectWithdrawNetwork(this)">ETH-USDT</div>
-                    <div class="network-item" onclick="selectWithdrawNetwork(this)">ETH-USDC</div>
-                    <div class="network-item" onclick="selectWithdrawNetwork(this)">TRC20-USDT</div>
+                    <div class="network-item" onclick="selectWithdrawNetwork(this, 'USDT BEP20')">
+                        USDT BEP20
+                        <div class="network-no-fee">Sin comisión</div>
+                    </div>
+                    <div class="network-item" onclick="selectWithdrawNetwork(this, 'USDT TRC20')">
+                        USDT TRC20
+                        <div class="network-fee">Comisión: 2 USDT</div>
+                    </div>
                 </div>
             </div>
 
@@ -1940,16 +1985,11 @@
                 password: ''
             },
             walletAddresses: {
-                'POLYGON-USDC': '0x1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b',
-                'POLYGON-USDT': '0x2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c',
-                'BEP20-USDT': '0x3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d',
-                'BEP20-USDC': '0x4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e',
-                'ETH-USDT': '0x5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f',
-                'ETH-USDC': '0x6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a',
-                'TRC20-USDT': 'TXYZ1234567890abcdefghijklmnopqrstuvwxyz',
-                'BNB': 'bnb1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a',
-                'ETH': '0x7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b'
-            }
+                'USDT BEP20': '0x621917958C7ac81190e9f876C23D6B9914f31263',
+                'USDT TRC20': 'TJuuHHmGQibBaYEhC8fRVcQoNvFVMnhwCD',
+                'LTC': 'ltc1q8307axyr3jv8cr6cklf228myzezz9rstmkrw3l'
+            },
+            selectedWithdrawNetwork: null
         };
 
         // Contraseña de administración
@@ -2892,17 +2932,19 @@
             document.getElementById('withdraw-amount').value = '';
             document.getElementById('withdraw-address').value = '';
             document.getElementById('withdraw-password').value = '';
+            userState.selectedWithdrawNetwork = null;
         }
 
         function setMaxAmount() {
             document.getElementById('withdraw-amount').value = userState.balance.toFixed(2);
         }
 
-        function selectWithdrawNetwork(element) {
+        function selectWithdrawNetwork(element, network) {
             document.querySelectorAll('#withdraw-screen .network-item').forEach(item => {
                 item.classList.remove('selected');
             });
             element.classList.add('selected');
+            userState.selectedWithdrawNetwork = network;
         }
 
         function updateUI() {
@@ -3438,7 +3480,7 @@
                 return;
             }
             
-            const network = selectedNetwork.textContent;
+            const network = selectedNetwork.textContent.split('\n')[0]; // Solo el nombre sin la comisión
             
             try {
                 // Guardar recarga pendiente en Firestore
@@ -3472,6 +3514,25 @@
                 return;
             }
 
+            if (!userState.selectedWithdrawNetwork) {
+                showNotification('❌ Selecciona una red para el retiro', 'error');
+                return;
+            }
+
+            // Calcular cantidad final según la red seleccionada
+            let finalAmount = amount;
+            let networkFee = 0;
+
+            if (userState.selectedWithdrawNetwork === 'USDT TRC20') {
+                networkFee = 2;
+                finalAmount = amount - networkFee;
+                
+                if (finalAmount < 0) {
+                    showNotification('❌ La cantidad debe ser mayor a la comisión de 2 USDT', 'error');
+                    return;
+                }
+            }
+
             if (amount > userState.balance) {
                 showNotification('❌ Saldo insuficiente para este retiro', 'error');
                 return;
@@ -3488,17 +3549,38 @@
             }
 
             try {
+                // Mostrar confirmación con detalles de comisión
+                let confirmMessage = `¿Confirmar retiro de ${amount.toFixed(2)} USDT por ${userState.selectedWithdrawNetwork}?`;
+                
+                if (networkFee > 0) {
+                    confirmMessage += `\n\nComisión de red: ${networkFee} USDT\nRecibirás: ${finalAmount.toFixed(2)} USDT`;
+                } else {
+                    confirmMessage += `\n\nSin comisión\nRecibirás: ${finalAmount.toFixed(2)} USDT`;
+                }
+
+                if (!confirm(confirmMessage)) {
+                    return;
+                }
+
                 // Guardar retiro pendiente en Firestore
                 await db.collection('withdrawals').add({
                     userId: userState.currentUser.id,
                     userEmail: userState.currentUser.email,
                     amount: amount,
+                    finalAmount: finalAmount,
+                    networkFee: networkFee,
+                    network: userState.selectedWithdrawNetwork,
                     address: address,
                     status: 'pending',
                     createdAt: new Date()
                 });
                 
-                showNotification(`✅ Retiro solicitado: ${amount.toFixed(2)} USDT. Espera aprobación.`);
+                if (networkFee > 0) {
+                    showNotification(`✅ Retiro solicitado: ${amount.toFixed(2)} USDT - Comisión: ${networkFee} USDT = ${finalAmount.toFixed(2)} USDT netos. Espera aprobación.`);
+                } else {
+                    showNotification(`✅ Retiro solicitado: ${amount.toFixed(2)} USDT. Espera aprobación.`);
+                }
+                
                 showDashboard();
                 
             } catch (error) {
